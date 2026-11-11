@@ -169,8 +169,11 @@ final class AppModel {
         }
     }
 
-    /// Hook for later milestones (dropping temporary labels on outside changes).
-    func roomsChangedFromStream(_ ids: Set<String>) {}
+    /// Bookkeeping after live updates: a room switched on from outside no longer counts as "dimmed to 0".
+    func roomsChangedFromStream(_ ids: Set<String>) {
+        let lit = ids.filter { home.room($0)?.isOn == true }
+        if !lit.isEmpty { store.zeroDimmed.subtract(lit) }
+    }
 
     private func scheduleReload() {
         reloadTask?.cancel()

@@ -39,8 +39,8 @@ struct BridgeEnvironment {
     }
 
     /// The environment for this launch (see RuntimeEnvironment for the debug arguments).
-    static func current(log: LogSink) -> BridgeEnvironment {
-        guard RuntimeEnvironment.usesMockBridge else { return .live() }
+    static func current(log: LogSink, store: SharedStore) -> BridgeEnvironment {
+        guard RuntimeEnvironment.usesMockBridge else { return .live(store: store) }
         let tiles = RuntimeEnvironment.debugValue("mockTiles").flatMap(Int.init) ?? 6
         let client = MockBridgeClient(home: MockHome.sample(tiles: tiles),
                                       reachable: !RuntimeEnvironment.flag("mockOffline"), log: log)
@@ -52,6 +52,6 @@ struct BridgeEnvironment {
                 }
             }
         }
-        return .mock(client, paired: !RuntimeEnvironment.flag("unpaired"))
+        return .mock(client, paired: !RuntimeEnvironment.flag("unpaired"), store: store)
     }
 }

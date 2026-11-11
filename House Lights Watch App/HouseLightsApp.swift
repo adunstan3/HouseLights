@@ -9,7 +9,8 @@ struct HouseLightsApp: App {
     init() {
         let log = BridgeLog(fileURL: RuntimeEnvironment.isTesting ? nil : BridgeLog.defaultURL)
         self.log = log
-        _model = State(initialValue: AppModel(environment: .current(log: log.sink), log: log))
+        let store = RuntimeEnvironment.sharedStore
+        _model = State(initialValue: AppModel(environment: .current(log: log.sink, store: store), store: store, log: log))
     }
 
     var body: some Scene {

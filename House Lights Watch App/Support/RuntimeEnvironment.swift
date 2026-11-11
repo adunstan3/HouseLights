@@ -30,6 +30,13 @@ nonisolated enum RuntimeEnvironment {
         return isSimulator && !flag("realBridge")
     }
 
+    /// UI tests (`-uiTesting`) get a blank settings store so earlier runs don't leak in.
+    static let sharedStore: SharedStore = {
+        guard arguments.contains("-uiTesting"), let blank = UserDefaults(suiteName: "uiTesting") else { return SharedStore() }
+        blank.removePersistentDomain(forName: "uiTesting")
+        return SharedStore(defaults: blank)
+    }()
+
     static func debugValue(_ key: String) -> String? {
         #if DEBUG
         UserDefaults.standard.string(forKey: key)

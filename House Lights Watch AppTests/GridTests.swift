@@ -1,0 +1,118 @@
+import CoreGraphics
+import Foundation
+import Testing
+@testable import House_Lights_Watch_App
+
+struct GridLayoutTests {
+    @Test func gridSizesFollowTheSpec() {
+        for n in 1...4 { #expect(GridLayout.make(count: n, width: 190, height: 170).columns == 2) }
+        for n in 5...9 { #expect(GridLayout.make(count: n, width: 190, height: 170).columns == 3) }
+        for n in [10, 15, 30] {
+            let l = GridLayout.make(count: n, width: 190, height: 170)
+            #expect(l.columns == 3)   // never four across
+            #expect(l.scrolls)
+        }
+        #expect(!GridLayout.make(count: 9, width: 190, height: 170).scrolls)
+    }
+
+    @Test func tilesFitTheSpace() {
+        let l = GridLayout.make(count: 9, width: 190, height: 170)
+        #expect(l.gridWidth <= 190)
+        #expect(l.tile * 3 + l.spacing * 2 <= 170)
+        #expect(l.tile >= 44)   // tap target
+        let big = GridLayout.make(count: 4, width: 190, height: 170)
+        #expect(big.tile > l.tile)
+    }
+
+    @Test func slotFrames() {
+        let l = GridLayout(columns: 3, tile: 50, spacing: 6, scrolls: false)
+        #expect(l.frame(of: 0) == CGRect(x: 0, y: 0, width: 50, height: 50))
+        #expect(l.frame(of: 4) == CGRect(x: 56, y: 56, width: 50, height: 50))
+    }
+}
+
+struct CrownBrightnessTests {
+    func room(_ id: String, on: Bool, _ b: Double, kind: RoomKind = .room) -> Room {
+        Room(id: id, kind: kind, name: id, archetype: "other", groupedLightID: "g-\(id)", lightIDs: [], isOn: on, brightness: b)
+    }
+
+    @Test func addsTheSameStepToEveryRoomThatIsOn() {
+        let c = CrownBrightness.apply(steps: 1, to: [room("a", on: true, 70), room("b", on: true, 40), room("c", on: false, 50)])
+        #expect(c == ["a": .brightness(75), "b": .brightness(45)])
+    }
+
+    @Test func stopsAtOneHundredAndTurnsOffAtZero() {
+        #expect(CrownBrightness.apply(steps: 1, to: [room("a", on: true, 98)]) == ["a": .brightness(100)])
+        #expect(CrownBrightness.apply(steps: -1, to: [room("a", on: true, 5)]) == ["a": .off])
+        #expect(CrownBrightness.apply(steps: -1, to: [room("a", on: true, 3)]) == ["a": .off])
+        #expect(CrownBrightness.apply(steps: -2, to: [room("a", on: true, 20)]) == ["a": .brightness(10)])
+    }
+
+    @Test func zonesAreLeftAlone() {
+        #expect(CrownBrightness.apply(steps: 1, to: [room("z", on: true, 50, kind: .zone)]).isEmpty)
+        #expect(CrownBrightness.affected([room("a", on: true, 5), room("z", on: true, 5, kind: .zone), room("b", on: false, 5)]) == 1)
+    }
+}
+
+@MainActor
+struct ControlTests {
+    func ready() async -> (AppModel, MockBridgeClient) {
+        let (app, mock) = ConnectionTests.makeApp(paired: true)
+        await app.start()
+        return (app, mock)
+    }
+
+    @Test func tapTogglesAtOnceAndTellsTheBridge() async throws {
+        let (app, mock) = await ready()
+        app.toggle("mock-room-0")
+        #expect(app.room("mock-room-0")?.isOn == false)   // immediately
+        try await Task.sleep(for: .milliseconds(100))
+        #expect(await mock.currentHome.room("mock-room-0")?.isOn == false)
+    }
+
+    @Test func roomDimmedToZeroComesBackAtSeventy() async throws {
+        let (app, mock) = await ready()
+        for _ in 0..<20 { app.crownStep(-1) }              // living room 70% → 0 → off
+        #expect(app.room("mock-room-0")?.isOn == false)
+        #expect(app.store.zeroDimmed.contains("mock-room-0"))
+        try await Task.sleep(for: .milliseconds(1200))
+        app.toggle("mock-room-0")
+        #expect(app.room("mock-room-0")?.percent == 70)
+        try await Task.sleep(for: .milliseconds(1200))
+        #expect(await mock.currentHome.room("mock-room-0")?.percent == 70)
+        #expect(!app.store.zeroDimmed.contains("mock-room-0"))
+    }
+
+    @Test func allOffUsesTheAllLightsGroup() async throws {
+        let (app, mock) = await ready()
+        app.allOff()
+        #expect(app.rooms.allSatisfy { !$0.isOn })
+        try await Task.sleep(for: .milliseconds(100))
+        let home = await mock.currentHome
+        #expect(home.lights.values.allSatisfy { !$0.isOn })
+    }
+
+    @Test func crownKeepsDifferencesBetweenRooms() async {
+        let (app, _) = await ready()
+        app.crownStep(1)
+        #expect(app.room("mock-room-0")?.percent == 75)    // 70 → 75
+        #expect(app.room("mock-room-3")?.percent == 90)    // 85 → 90
+        #expect(app.room("mock-room-1")?.percent == 100)   // already 100
+        #expect(app.room("mock-room-2")?.isOn == false)    // off rooms untouched
+        #expect(app.room("mock-zone-0")?.percent == 80)    // zones untouched
+    }
+
+    @Test func liveUpdatesFromTheStreamReachTheTiles() async throws {
+        let (app, mock) = await ready()
+        app.isActive = true
+        app.startEventStream()
+        try await Task.sleep(for: .milliseconds(50))
+        await mock.simulateOutsideChange()
+        try await Task.sleep(for: .milliseconds(100))
+        let home = await mock.currentHome
+        for room in home.rooms where room.kind == .room {
+            #expect(app.room(room.id)?.isOn == room.isOn)
+        }
+        app.stopEventStream()
+    }
+}
