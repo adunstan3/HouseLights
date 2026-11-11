@@ -1,5 +1,7 @@
+import AppIntents
 import Foundation
 import Observation
+import WidgetKit
 
 /// The app's state: connection to the bridge, the home (rooms, zones, lights), and the
 /// live event stream. Control actions live in the AppModel+… extensions.
@@ -79,6 +81,9 @@ final class AppModel {
             log.add(.info, "Loaded \(fresh.rooms.filter { $0.kind == .room }.count) rooms, \(fresh.rooms.filter { $0.kind == .zone }.count) zones, \(fresh.lights.count) lights")
             afterReload()
             if isActive { startEventStream() }
+            // Siri learns the rooms' Hue names; the widget picks up their state.
+            HouseLightsShortcuts.updateAppShortcutParameters()
+            WidgetCenter.shared.reloadAllTimelines()
         } catch {
             fail(error)
         }
@@ -122,6 +127,7 @@ final class AppModel {
         isActive = false
         stopEventStream()
         log.saveNow()
+        WidgetCenter.shared.reloadAllTimelines()   // show what the app left the lights at
     }
 
     // MARK: Event stream

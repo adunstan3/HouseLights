@@ -81,7 +81,7 @@ struct DefaultsTests {
         let (app, mock) = await ready()
         app.isActive = true
         app.startEventStream()
-        try await Task.sleep(for: .milliseconds(50))                              // let the stream connect
+        #expect(await eventually { await mock.streamCount > 0 })                 // let the stream connect
         app.setWarmth(kelvin: 5000, roomID: "mock-room-0")
         #expect(app.isTemporary("mock-room-0"))
         app.lastLocalChange["mock-room-0"] = .distantPast                        // pretend it was a while ago
@@ -92,10 +92,10 @@ struct DefaultsTests {
     }
 
     @Test func echoesOfOurOwnChangesKeepTheLabel() async throws {
-        let (app, _) = await ready()
+        let (app, mock) = await ready()
         app.isActive = true
         app.startEventStream()
-        try await Task.sleep(for: .milliseconds(50))
+        #expect(await eventually { await mock.streamCount > 0 })
         app.setWarmth(kelvin: 5000, roomID: "mock-room-0")
         try await Task.sleep(for: .milliseconds(200))                             // the bridge echoes it back
         #expect(app.isTemporary("mock-room-0"))

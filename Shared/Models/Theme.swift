@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// Colors and type from SPEC.md's Look section.
+/// Colors and type from SPEC.md's Look section (shared with the widget).
 nonisolated enum Theme {
     /// Amber, for back arrows, main buttons and highlights.
     static let accent = Color(hex: 0xFFB65C)
@@ -37,28 +37,4 @@ extension LightColor {
     var tileColor: Color { Color(rgb.mixed(with: .white, amount: 0.25)) }
     /// The pure color, for small swatches.
     var swatchColor: Color { Color(rgb) }
-}
-
-/// Amber, full-width main button with dark text.
-struct PrimaryButtonStyle: ButtonStyle {
-    func makeBody(configuration: Configuration) -> some View {
-        configuration.label
-            .font(.system(size: 16, weight: .semibold))
-            .foregroundStyle(Theme.onAccent)
-            .frame(maxWidth: .infinity, minHeight: Metrics.buttonHeight)
-            .background(Capsule().fill(Theme.accent.opacity(configuration.isPressed ? 0.7 : 1)))
-            .contentShape(Capsule())
-    }
-}
-
-/// Dark gray, full-width secondary button.
-struct SecondaryButtonStyle: ButtonStyle {
-    func makeBody(configuration: Configuration) -> some View {
-        configuration.label
-            .font(.system(size: 16, weight: .semibold))
-            .foregroundStyle(.white)
-            .frame(maxWidth: .infinity, minHeight: Metrics.buttonHeight)
-            .background(Capsule().fill(Theme.secondaryButton.opacity(configuration.isPressed ? 0.6 : 1)))
-            .contentShape(Capsule())
-    }
 }

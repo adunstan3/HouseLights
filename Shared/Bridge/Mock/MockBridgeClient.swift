@@ -24,6 +24,8 @@ actor MockBridgeClient: BridgeClient {
     }
 
     var currentHome: HomeSnapshot { home }
+    /// How many event streams are listening (tests wait for one before simulating changes).
+    var streamCount: Int { streams.count }
 
     // MARK: BridgeClient
 

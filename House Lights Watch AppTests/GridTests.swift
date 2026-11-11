@@ -103,7 +103,7 @@ struct ControlTests {
         let (app, mock) = await ready()
         app.isActive = true
         app.startEventStream()
-        try await Task.sleep(for: .milliseconds(50))
+        #expect(await eventually { await mock.streamCount > 0 })
         await mock.simulateOutsideChange()
         let home = await mock.currentHome
         func matches() -> Bool { home.rooms.filter { $0.kind == .room }.allSatisfy { app.room($0.id)?.isOn == $0.isOn } }
