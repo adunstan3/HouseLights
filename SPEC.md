@@ -8,7 +8,7 @@ House Lights is a watch-only app that controls Philips Hue lights from an Apple 
 
 - **Device:** Apple Watch Ultra (1st gen), watchOS 26. Watch-only SwiftUI app; the iPhone stays at the office.
 - **Hardware:** a Hue Bridge plus bulbs, on a home router with internet.
-- **Bundle ID:** com.andrewdunstan.House-Lights. Display name: House Lights.
+- **Bundle ID:** com.andrewdunstan.HouseLights. Display name: House Lights.
 - **Controls in v1:** rooms and zones (on/off, brightness), color temperature, and a full color wheel. No individual-light control and no scenes in the UI.
 - **Extras:** a Smart Stack widget with 2–4 room toggles, and Siri through App Intents.
 - **Everything is local:** the app talks only to the bridge on the home network. No Hue account, no cloud, no background location.

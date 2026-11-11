@@ -5,7 +5,7 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 
 DERIVED="${DERIVED:-build/DerivedData}"
-BUNDLE_ID="com.andrewdunstan.House-Lights.watchkitapp"
+BUNDLE_ID="com.andrewdunstan.HouseLights.watchkitapp"
 SIM_ID=$("$(dirname "$0")/sim.sh")
 
 SHOT=""
