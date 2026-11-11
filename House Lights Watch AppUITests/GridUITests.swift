@@ -51,7 +51,7 @@ final class GridUITests: XCTestCase {
         shot.name = "crown-pill"
         shot.lifetime = .keepAlways
         add(shot)
-        XCTAssertEqual(pill.label, "Brighter · 3 on")   // living room, kitchen, office; zones don't count
+        XCTAssertEqual(pill.label, "Brighter · 4 on")   // living room, kitchen, office, bathroom
         let brighter = NSPredicate(format: "value != '70 percent'")
         expectation(for: brighter, evaluatedWith: living)
         waitForExpectations(timeout: 5)

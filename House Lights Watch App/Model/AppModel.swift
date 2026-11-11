@@ -63,8 +63,8 @@ final class AppModel {
     /// Rooms whose Back to default was tapped while off.
     var pendingDefaults: Set<String> = [] { didSet { store.pendingDefaults = pendingDefaults } }
 
-    /// Rooms and zones in the user's order.
-    var rooms: [Room] { GridOrder.apply(gridOrder, to: home.rooms) }
+    /// The grid's tiles: Hue rooms (not zones) in the user's order.
+    var rooms: [Room] { GridOrder.apply(gridOrder, to: home.rooms.filter { $0.kind == .room }) }
 
     var isActive = false
 

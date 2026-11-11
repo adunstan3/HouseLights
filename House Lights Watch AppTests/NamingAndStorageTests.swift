@@ -46,15 +46,15 @@ struct NamingAndStorageTests {
         #expect(store.temporaryRooms["r1"] == .temperature(mirek: 300))
         #expect(store.zeroDimmed == ["r2"])
         store.lastKnownRooms = MockHome.sample().rooms
-        #expect(store.lastKnownRooms.count == 6)
+        #expect(store.lastKnownRooms.count == 7)
     }
 
     @Test func mockSampleMatchesTheMockup() {
         let home = MockHome.sample()
-        #expect(home.rooms.map(\.name) == ["Living room", "Kitchen", "Bedroom", "Office", "Front door", "Downstairs"])
+        #expect(home.rooms.map(\.name) == ["Living room", "Kitchen", "Bedroom", "Office", "Front door", "Bathroom", "Downstairs"])
         #expect(home.rooms.last?.kind == .zone)
-        #expect(MockHome.sample(tiles: 4).rooms.count == 4)
-        #expect(MockHome.sample(tiles: 12).rooms.count == 12)
+        #expect(MockHome.sample(tiles: 4).rooms.filter { $0.kind == .room }.count == 4)
+        #expect(MockHome.sample(tiles: 12).rooms.filter { $0.kind == .room }.count == 12)
     }
 
     @Test func mockBridgeAppliesCommandsAndEmitsEvents() async throws {

@@ -3,7 +3,7 @@ import Foundation
 /// Facts about how the app was launched, and debug launch arguments for jumping to screens.
 ///
 /// Debug launch arguments (simulator / debug builds only):
-/// - `-mockTiles 4`        how many rooms + zones the mock bridge has (default 6)
+/// - `-mockTiles 4`        how many rooms the mock bridge has (default 6; plus one zone)
 /// - `-unpaired YES`       start as if no bridge is paired
 /// - `-mockOffline YES`    the mock bridge doesn't answer (Bridge not reachable)
 /// - `-mockOutsideChanges YES` the mock flips a room every 15 s, like a wall switch

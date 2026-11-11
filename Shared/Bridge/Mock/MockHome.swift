@@ -17,7 +17,6 @@ nonisolated enum MockHome {
         Spec(name: "Bedroom", archetype: "bedroom", on: false, brightness: 40, color: .temperature(mirek: 370), whiteOnly: true),
         Spec(name: "Office", archetype: "office", on: true, brightness: 85, color: .xy(XY(x: 0.235, y: 0.235))),
         Spec(name: "Front door", archetype: "front_door", on: false, brightness: 60, color: .temperature(mirek: 370)),
-        // index 5 is the Downstairs zone (added below)
         Spec(name: "Bathroom", archetype: "bathroom", on: true, brightness: 55, color: .temperature(mirek: 200)),
         Spec(name: "Garage", archetype: "garage", on: false, brightness: 100, color: .temperature(mirek: 300)),
         Spec(name: "Garden", archetype: "garden", on: true, brightness: 30, color: .xy(XY(x: 0.3, y: 0.55))),
@@ -29,11 +28,12 @@ nonisolated enum MockHome {
         Spec(name: "Porch", archetype: "porch", on: true, brightness: 45, color: .xy(XY(x: 0.55, y: 0.4))),
     ]
 
-    /// `tiles` is how many rooms + zones to show (the 6th tile is the Downstairs zone).
+    /// `tiles` rooms, plus a Downstairs zone (living room + kitchen lights) that the grid
+    /// doesn't show but Siri and the widget can use.
     static func sample(tiles: Int = 6) -> HomeSnapshot {
         var home = HomeSnapshot()
         home.allLightsGroupID = "mock-all"
-        let roomSpecs = Array(specs.prefix(max(tiles >= 6 ? tiles - 1 : tiles, 0)))
+        let roomSpecs = Array(specs.prefix(max(tiles, 0)))
         for (i, spec) in roomSpecs.enumerated() {
             let lightIDs = ["mock-light-\(i)-a", "mock-light-\(i)-b"]
             for (j, id) in lightIDs.enumerated() {
@@ -46,7 +46,7 @@ nonisolated enum MockHome {
             HomeSnapshot.derive(&room, from: lightIDs.compactMap { home.lights[$0] })
             home.rooms.append(room)
         }
-        if tiles >= 6 {
+        if tiles >= 2 {
             // A zone made of the living room and kitchen lights.
             let ids = ["mock-light-0-a", "mock-light-0-b", "mock-light-1-a", "mock-light-1-b"]
             var zone = Room(id: "mock-zone-0", kind: .zone, name: "Downstairs", archetype: "downstairs",

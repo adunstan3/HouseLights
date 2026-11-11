@@ -21,8 +21,9 @@ struct ConnectionTests {
         let (app, _) = Self.makeApp(paired: true)
         await app.start()
         #expect(app.phase == .ready)
-        #expect(app.rooms.count == 6)
-        #expect(app.store.lastKnownRooms.count == 6)
+        #expect(app.rooms.count == 6)                          // rooms only
+        #expect(app.rooms.allSatisfy { $0.kind == .room })
+        #expect(app.store.lastKnownRooms.count == 7)           // the zone is still known (Siri, widget)
     }
 
     @Test func noAnswerShowsBridgeNotReachableAndTryAgainRecovers() async {
@@ -81,5 +82,17 @@ struct NoticeTests {
         #expect(app.notice == "The bridge didn’t accept that change.")
         app.fail(BridgeError.unreachable("timed out"))
         guard case .unreachable = app.phase else { Issue.record("expected Bridge not reachable"); return }
+    }
+}
+
+@MainActor
+struct RoomsOnlyTests {
+    @Test func gridShowsRoomsButNotZones() async {
+        let (app, _) = ConnectionTests.makeApp(paired: true)
+        await app.start()
+        app.saveOrder(["mock-zone-0", "mock-room-3"])          // an old order that still lists the zone
+        #expect(app.rooms.first?.id == "mock-room-3")
+        #expect(!app.rooms.contains { $0.kind == .zone })
+        #expect(app.home.room("mock-zone-0") != nil)            // still known for Siri and the widget
     }
 }
