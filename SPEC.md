@@ -20,7 +20,7 @@ The watch calls the bridge's local CLIP API v2 over HTTPS on home Wi-Fi; nothing
 
 - **Address:** the user enters the bridge's IP on the Bridge screen. They reserve a fixed IP for it in the router. watchOS can't do mDNS discovery, so there is no auto-discovery.
 - **Pairing:** the user presses the bridge's round button, then taps Pair within 30 seconds. The app POSTs to `/api` with `generateclientkey: true` and retries every 2 seconds until the bridge answers or 30 seconds pass. The returned application key (`hue-application-key`) is stored in the Keychain.
-- **Certificate:** the bridge uses a self-signed certificate. Trust it with a URLSession delegate that accepts the bridge's certificate only for the saved IP. Never disable certificate checks globally.
+- **Certificate:** the bridge uses a self-signed certificate. Trust it with a URLSession delegate that accepts the bridge's certificate only for the saved IP. Never disable certificate checks globally. The certificate seen at pairing is remembered (stored with the key), and a different one is refused later with a "re-pair" message in the log.
 - **Local network:** add `NSLocalNetworkUsageDescription` and an App Transport Security exception for local networking (`NSAllowsLocalNetworking`).
 - **Reading state:** `GET /clip/v2/resource/room`, `zone`, `grouped_light` and `light`. Rooms and zones come from the bridge, with their names and room types (archetypes).
 - **Controlling:** a room or zone is controlled through its `grouped_light` (on, dimming, color\_temperature, color).
@@ -47,6 +47,7 @@ Every screen fits one watch screen without scrolling. The one exception is the g
 - **Tiles:** square, rounded. A lit tile fills with the room's current color, shows a dark icon and its brightness %. An off tile is dark gray and says Off.
 - **Icons:** chosen from each room's Hue archetype (sofa for living room, chef's hat for kitchen, bed, monitor for office, door for front door, house for zones, and so on), with a bulb as the fallback. No name labels by default.
 - **Tap** a tile to toggle that room. **Hold** it 0.5 s to open its Room screen; a hold never also toggles.
+- **All off:** one command to the bridge's all-lights group (`bridge_home`'s `grouped_light`), not one per tile.
 - **Order:** the user's order from Arrange. New rooms from the bridge go to the end.
 
 **Arrange drag rules** (to prevent the fighting seen in Closing Time)
@@ -56,11 +57,14 @@ Every screen fits one watch screen without scrolling. The one exception is the g
 3. Wait about 150 ms on a new slot before moving the other tiles, then animate them aside.
 4. The dragged tile lifts (slightly larger, white outline) and its order is saved on release.
 
+Arrange tiles look like the grid's current state: lit rooms in their color, off rooms dark gray. They show icons only.
+
 ## Behavior details
 
 **Digital Crown on the grid**
 
 - **Rooms that are on:** one Crown step adds the same amount (5 points) to every room that's on, so differences are kept (70% and 40% become 75% and 45%). Rooms that are off are untouched.
+- **Rooms only:** the Crown changes rooms, never zones (a zone's bulbs usually belong to a room too). Zones are still shown and toggled by tap. The pill's count is rooms.
 - **Limits:** each room stops at 100%. A room that reaches 0% turns off.
 - **Back on at 0%:** tapping a room that was dimmed to 0% turns it on at 70%.
 - **Feedback:** a small pill ("Brighter · 4 on" or "Dimmer · 4 on") shows briefly while turning.
@@ -70,13 +74,14 @@ Every screen fits one watch screen without scrolling. The one exception is the g
 
 - The Crown sets that room's brightness. Its on/off button toggles the room.
 - **Warmth** sets color temperature (2200–6500 K). **Color wheel** sets color. Whichever was touched last is what the lights show.
-- The color wheel sends a color when the finger lifts, not on every movement. Convert the wheel's color to Hue's CIE xy coordinates and clamp it to each bulb's color gamut.
+- The color wheel sends a color when the finger lifts, not on every movement. Convert the wheel's color to Hue's CIE xy coordinates and clamp it to the room's color gamut (the gamut most of its color bulbs share, usually Hue's gamut C), so the swatch matches what the bulbs show. It's sent once through the room's `grouped_light`; the bridge fits it to any bulb with a narrower gamut.
 
 **Temporary colors and defaults**
 
 - Each room has a default color, stored as a bridge scene named "House Lights – \<room name>". Restoring is one scene recall, and the default survives reinstalling the app.
 - Any warmth or color change that differs from the default is temporary. It stays through any number of off/on cycles (app, widget, Siri) until the user taps **Back to default**.
 - When a room is temporary, the Room screen shows the Temporary color card: the default's swatch and **Back to default** and **Set as default** side by side. Set as default rewrites that room's scene with the current color.
+- **Back to default** keeps the room's current brightness. On a room that's off it doesn't turn the lights on; the default comes back the next time the room is turned on.
 - If a bulb comes back from a power cut in Hue's own warm white, the color has changed; the app notices through the event stream and drops the temporary label.
 - The app remembers which rooms are temporary.
 
@@ -91,7 +96,7 @@ Both run on the same App Intents, so the toggle and brightness logic is written 
 
 **Smart Stack widget**
 
-- Rectangular widget headed "House Lights" with 2–4 round room toggles in the room's color when on and gray when off.
+- Rectangular widget headed "House Lights" with 2–4 round room toggles in the room's color when on and gray when off, each labelled with a short name (a trailing "room" dropped, e.g. "Living").
 - The user picks the rooms when adding the widget and changes them by editing it (an AppIntent widget configuration).
 - Tapping a toggle runs the toggle intent without opening the app.
 - It shows the last-known state; a tap re-checks the bridge and refreshes the widget. It doesn't poll.
