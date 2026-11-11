@@ -1,12 +1,16 @@
 import SwiftUI
 
-/// Binds the Digital Crown to one room's brightness (Room and Color wheel screens).
-/// Turning to 0 turns the room off; turning up from off turns it on.
+/// Binds the Digital Crown to one room's brightness (Room and Color wheel screens):
+/// each detent is 1%. Turning to 0 turns the room off; turning up from off turns it on.
+///
+/// The Crown is unbounded and continuous, like the grid's, and we apply the change in each
+/// turn ourselves. A bounded 0–100 Crown makes watchOS draw its green position indicator
+/// on the right, as if the page were scrolling.
 struct BrightnessCrown: ViewModifier {
     let roomID: String
     @Environment(AppModel.self) private var app
-    @State private var value = 0.0
-    @State private var lastTurn = Date.distantPast
+    @State private var crown = 0.0
+    @State private var applied = 0.0
     @FocusState private var focused: Bool
 
     func body(content: Content) -> some View {
@@ -14,24 +18,20 @@ struct BrightnessCrown: ViewModifier {
             .focusable()
             .focused($focused)
             .focusEffectDisabled()
-            .digitalCrownRotation($value, from: 0, through: 100, by: 1, sensitivity: .medium,
-                                  isContinuous: false, isHapticFeedbackEnabled: true)
-            .digitalCrownAccessory(.hidden)   // no green scroll indicator; this isn't a scrolling page
-            .onAppear {
-                value = current
-                focused = true
-            }
-            .onChange(of: value) { _, new in
-                guard abs(new - current) >= 0.5 else { return }   // ignore our own sync below
-                lastTurn = .now
-                app.setBrightness(new, roomID: roomID)
-            }
-            .onChange(of: current) { _, new in
-                // Follow changes from elsewhere (event stream, power button), but not while turning.
-                if Date().timeIntervalSince(lastTurn) > 1.5 { value = new }
+            .digitalCrownRotation($crown, from: -100_000, through: 100_000, by: 1, sensitivity: .medium,
+                                  isContinuous: true, isHapticFeedbackEnabled: true)
+            .digitalCrownAccessory(.hidden)
+            .onAppear { focused = true }
+            .onChange(of: crown) { _, value in
+                let steps = Int((value - applied).rounded(.towardZero))
+                guard steps != 0 else { return }
+                applied += Double(steps)
+                let target = min(max(current + Double(steps), 0), 100)
+                if target != current { app.setBrightness(target, roomID: roomID) }
             }
     }
 
+    /// The brightness the Crown starts from: 0 when the room is off.
     private var current: Double {
         guard let room = app.room(roomID), room.isOn else { return 0 }
         return room.brightness.rounded()

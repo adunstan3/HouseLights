@@ -37,4 +37,12 @@ extension LightColor {
     var tileColor: Color { Color(rgb.mixed(with: .white, amount: 0.25)) }
     /// The pure color, for small swatches.
     var swatchColor: Color { Color(rgb) }
+
+    /// Dark text on light fills, white on dark ones (a saturated blue, say), for buttons
+    /// filled with `tileColor`.
+    var labelColor: Color {
+        let c = rgb.mixed(with: .white, amount: 0.25)
+        let luminance = 0.2126 * c.r + 0.7152 * c.g + 0.0722 * c.b
+        return luminance > 0.55 ? Theme.onAccent : .white
+    }
 }

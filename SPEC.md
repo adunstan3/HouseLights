@@ -75,7 +75,7 @@ Arrange tiles look like the grid's current state: lit rooms in their color, off 
 
 **Room screen**
 
-- The Crown sets that room's brightness. Its on/off button toggles the room.
+- The Crown sets that room's brightness, 1% per detent, with no scroll indicator. Its on/off button toggles the room.
 - **Warmth** sets color temperature (2200–6500 K). **Color wheel** sets color. Whichever was touched last is what the lights show.
 - The color wheel sends a color when the finger lifts, not on every movement. Convert the wheel's color to Hue's CIE xy coordinates and clamp it to the room's color gamut (the gamut most of its color bulbs share, usually Hue's gamut C), so the swatch matches what the bulbs show. It's sent once through the room's `grouped_light`; the bridge fits it to any bulb with a narrower gamut.
 
@@ -83,7 +83,7 @@ Arrange tiles look like the grid's current state: lit rooms in their color, off 
 
 - Each room has a default color, stored as a bridge scene named "House Lights – \<room name>". Restoring is one scene recall, and the default survives reinstalling the app.
 - Any warmth or color change that differs from the default is temporary. It stays through any number of off/on cycles (app, widget, Siri) until the user taps **Back to default**.
-- When a room is temporary, the Room screen shows the Temporary color card ("Temporary", the default's swatch and label, and **Back to default** and **Set as default** side by side; the button labels shrink to about 11 pt to fit). Set as default rewrites that room's scene with the current color.
+- When a room is temporary, the Room screen shows two tall buttons side by side: **Back to default**, filled with the room's default color, and **Set as default**, filled with the lights' current color (labels wrap onto two lines; white text on dark colors). Set as default rewrites that room's scene with the current color.
 - **Back to default** keeps the room's current brightness. On a room that's off it doesn't turn the lights on; the default comes back the next time the room is turned on.
 - If a bulb comes back from a power cut in Hue's own warm white, the color has changed; the app notices through the event stream and drops the temporary label.
 - The app remembers which rooms are temporary.

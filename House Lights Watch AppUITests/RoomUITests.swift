@@ -20,4 +20,24 @@ final class RoomUITests: XCTestCase {
         expectation(for: gone, evaluatedWith: app.descendants(matching: .any)["backToDefault"].firstMatch)
         waitForExpectations(timeout: 3)
     }
+
+    func testCrownChangesBrightnessOnTheRoomAndWheelScreens() {
+        let app = XCUIApplication()
+        app.launchArguments = ["-uiTesting", "-openScreen", "room", "-openRoom", "Living room"]
+        app.launch()
+        let level = app.descendants(matching: .any)["brightness"].firstMatch
+        XCTAssertTrue(level.waitForExistence(timeout: 20))
+        XCTAssertEqual(level.label, "70%")
+        XCUIDevice.shared.rotateDigitalCrown(delta: 0.3)
+        expectation(for: NSPredicate(format: "label != '70%'"), evaluatedWith: level)
+        waitForExpectations(timeout: 5)
+
+        app.descendants(matching: .any)["colorWheelRow"].firstMatch.tap()
+        let readout = app.descendants(matching: .any)["wheelBrightness"].firstMatch
+        XCTAssertTrue(readout.waitForExistence(timeout: 5))
+        let before = readout.label
+        XCUIDevice.shared.rotateDigitalCrown(delta: -0.3)
+        expectation(for: NSPredicate(format: "label != %@", before), evaluatedWith: readout)
+        waitForExpectations(timeout: 5)
+    }
 }

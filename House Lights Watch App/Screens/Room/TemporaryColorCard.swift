@@ -1,67 +1,54 @@
 import SwiftUI
 
-/// The Temporary color card: the default's swatch, and Back to default and Set as default
-/// side by side. Only shown while the room's color is temporary.
+/// Shown on the Room screen while the room's color is temporary: two tall buttons side by
+/// side. "Back to default" is filled with the room's default color, "Set as default" with
+/// the color the lights show now.
 struct TemporaryColorCard: View {
     let roomID: String
     @Environment(AppModel.self) private var app
 
     var body: some View {
-        if app.isTemporary(roomID) {
-            let defaultColor = app.defaultScene(roomID)?.color
-            VStack(alignment: .leading, spacing: 4) {
-                HStack(spacing: 6) {
-                    Circle()
-                        .fill(defaultColor?.swatchColor ?? Theme.secondaryButton)
-                        .frame(width: 14, height: 14)
-                    Text("Temporary")
-                        .font(.footnote.weight(.bold))
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.8)
-                    Spacer(minLength: 2)
-                    Text("Default \(defaultColor?.label ?? "")")
-                        .font(.footnote)
-                        .foregroundStyle(Theme.secondaryText)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.7)
-                }
+        if app.isTemporary(roomID), let room = app.room(roomID) {
+            HStack(spacing: 6) {
+                Button("Back to default") { app.backToDefault(roomID) }
+                    .buttonStyle(ColorButtonStyle(color: app.defaultScene(roomID)?.color))
+                    .disabled(app.home.defaults[roomID] == nil)
+                    .accessibilityIdentifier("backToDefault")
+                Button("Set as default") { app.setAsDefault(roomID) }
+                    .buttonStyle(ColorButtonStyle(color: room.displayColor))
+                    .accessibilityIdentifier("setAsDefault")
+            }
+            .overlay(alignment: .bottom) {
                 if let error = app.defaultsError {
-                    Text(error).font(.footnote).foregroundStyle(.red).lineLimit(1)
-                }
-                HStack(spacing: 5) {
-                    Button("Back to default") { app.backToDefault(roomID) }
-                        .buttonStyle(SmallCapsuleStyle(primary: true))
-                        .disabled(app.home.defaults[roomID] == nil)
-                        .accessibilityIdentifier("backToDefault")
-                    Button("Set as default") { app.setAsDefault(roomID) }
-                        .buttonStyle(SmallCapsuleStyle(primary: false))
-                        .accessibilityIdentifier("setAsDefault")
+                    Text(error).font(.footnote).foregroundStyle(.red).lineLimit(1).offset(y: 18)
                 }
             }
-            .padding(.horizontal, 5)
-            .padding(.vertical, 6)
-            .background(RoundedRectangle(cornerRadius: Metrics.cardRadius).fill(Theme.card))
             .accessibilityElement(children: .contain)
             .accessibilityIdentifier("temporaryCard")
         }
     }
 }
 
-/// The two half-width buttons on the Temporary color card.
-struct SmallCapsuleStyle: ButtonStyle {
-    let primary: Bool
+/// A tall rounded button filled with a light color; the label wraps onto two lines.
+struct ColorButtonStyle: ButtonStyle {
+    let color: LightColor?
+    @Environment(\.isEnabled) private var isEnabled
 
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .font(.system(size: 13, weight: .semibold))
-            .lineLimit(1)
-            // Both labels side by side need ~195 pt at 13 pt; the card has ~175 pt on a
-            // 49mm Ultra, so they shrink to about 11 pt rather than truncate.
-            .minimumScaleFactor(0.78)
-            .foregroundStyle(primary ? Theme.onAccent : .white)
-            .padding(.horizontal, 2)
-            .frame(maxWidth: .infinity, minHeight: 30)
-            .background(Capsule().fill((primary ? Theme.accent : Theme.secondaryButton).opacity(configuration.isPressed ? 0.7 : 1)))
-            .contentShape(Capsule())
+            .font(.system(size: 15, weight: .semibold))
+            .multilineTextAlignment(.center)
+            .lineLimit(2)
+            .minimumScaleFactor(0.85)
+            .foregroundStyle(color?.labelColor ?? Theme.onAccent)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 6)
+            .frame(maxWidth: .infinity, minHeight: 54)
+            .background(
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .fill(color?.tileColor ?? Theme.accent)
+                    .opacity(configuration.isPressed ? 0.7 : (isEnabled ? 1 : 0.5))
+            )
+            .contentShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
     }
 }
