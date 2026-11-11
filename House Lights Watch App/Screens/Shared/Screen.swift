@@ -5,12 +5,14 @@ import SwiftUI
 struct Screen<Content: View>: View {
     let title: String
     var showsBack = true
+    /// Back goes straight to the grid (Settings and its pages) rather than one screen back.
+    var backToGrid = false
     @ViewBuilder var content: () -> Content
     @Environment(Router.self) private var router
 
     var body: some View {
         VStack(alignment: .leading, spacing: Metrics.headerGap) {
-            ScreenHeader(title: title, showsBack: showsBack) { router.pop() }
+            ScreenHeader(title: title, showsBack: showsBack) { backToGrid ? router.popToRoot() : router.pop() }
             content()
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         }
@@ -64,6 +66,4 @@ enum Metrics {
     static let clockClearance: CGFloat = 56
     static let cardRadius: CGFloat = 14
     static let buttonHeight: CGFloat = 34
-    /// The grid's "Lights" title sits just under the toolbar buttons beside the clock.
-    static let gridTop: CGFloat = 52
 }

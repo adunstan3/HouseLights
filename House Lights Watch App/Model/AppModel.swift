@@ -34,6 +34,8 @@ final class AppModel {
     private var reloadTask: Task<Void, Never>?
     /// When the app last sent something to each room, so stream echoes aren't mistaken for outside changes.
     var lastLocalChange: [String: Date] = [:]
+    /// The newest grouped_light update per room that arrived while the room was settling.
+    @ObservationIgnored var heldUpdates: [String: HueEventItem] = [:]
     /// Default scenes being created on the bridge (used for comparisons until the bridge answers).
     var defaultsBeingCreated: [String: DefaultScene] = [:]
     /// The last error from a defaults action, shown on the Room screen.
@@ -194,15 +196,42 @@ final class AppModel {
             if HomeSnapshot.needsReload(event) { scheduleReload() }
             guard event.type == "update" else { continue }
             for item in event.data {
-                // Don't let an echo of an older value undo a newer one still waiting to be sent.
                 if item.type == "grouped_light", let room = home.rooms.first(where: { $0.groupedLightID == item.id }),
-                   sender.isPending(room.groupedLightID) { continue }
+                   isSettling(room) {
+                    hold(item, for: room)
+                    continue
+                }
                 changed.formUnion(home.apply(item))
             }
         }
         if !changed.isEmpty {
             store.lastKnownRooms = home.rooms
             roomsChangedFromStream(changed)
+        }
+    }
+
+    // MARK: Settling after a local change
+
+    /// How long after the app changes a room its own state wins over live updates. The bridge
+    /// echoes intermediate and older states (bulbs switch one by one; an earlier command's
+    /// update can arrive late), which made a tapped tile flash off → on → off.
+    static let settleTime: TimeInterval = 2
+
+    func isSettling(_ room: Room) -> Bool {
+        sender.isPending(room.groupedLightID)
+            || Date().timeIntervalSince(lastLocalChange[room.id] ?? .distantPast) < Self.settleTime
+    }
+
+    /// Keeps the newest update that arrived while settling and applies it once the room has
+    /// settled, so the tile ends up matching the bridge even if no further update comes.
+    private func hold(_ item: HueEventItem, for room: Room) {
+        heldUpdates[room.id] = item
+        Task { [weak self] in
+            try? await Task.sleep(for: .seconds(Self.settleTime + 0.1))
+            guard let self, let held = self.heldUpdates[room.id], let now = self.home.room(room.id),
+                  !self.isSettling(now) else { return }
+            self.heldUpdates[room.id] = nil
+            if !self.home.apply(held).isEmpty { self.store.lastKnownRooms = self.home.rooms }
         }
     }
 

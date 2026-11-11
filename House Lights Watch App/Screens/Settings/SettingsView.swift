@@ -5,7 +5,7 @@ struct SettingsView: View {
     @Environment(Router.self) private var router
 
     var body: some View {
-        Screen(title: "Settings") {
+        Screen(title: "Settings", backToGrid: true) {
             VStack(spacing: 8) {
                 SettingsRow(icon: "square.grid.2x2", title: "Arrange rooms", subtitle: "Order of the grid") {
                     router.push(.arrange)

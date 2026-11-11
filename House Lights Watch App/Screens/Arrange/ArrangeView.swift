@@ -8,7 +8,7 @@ struct ArrangeView: View {
     @State private var drag: ArrangeDrag?
 
     var body: some View {
-        Screen(title: "Arrange") {
+        Screen(title: "Arrange", backToGrid: true) {
             GeometryReader { geo in
                 VStack(spacing: 6) {
                     grid(in: CGSize(width: geo.size.width, height: geo.size.height - Self.captionHeight))

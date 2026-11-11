@@ -33,10 +33,10 @@ Every screen fits one watch screen without scrolling. The one exception is the g
 
 | Screen | Reached from | What it holds |
 | --- | --- | --- |
-| Rooms grid (home) | App launch | All-off button left of the clock, a gear to Settings right of it, the title "Lights" below, and one tile per room and zone |
+| Rooms grid (home) | App launch | All-off button left of the clock, a gear to Settings right of it, the title "Lights" centered under the time, and one tile per room and zone |
 | Room | Hold a tile 0.5 s | Back arrow + room name; a top row with the on/off button, brightness % and a brightness bar; a Warmth slider; a Color wheel row; the default-color card |
 | Color wheel | Room › Color wheel | Back arrow, Crown brightness readout, and the largest wheel that fits. Nothing else |
-| Settings | Grid › gear | Arrange rooms, Bridge |
+| Settings | Grid › gear | Arrange rooms, Bridge. Back from Settings, Arrange or Bridge goes straight to the grid |
 | Arrange | Settings › Arrange rooms | The same icon grid; dragging reorders it, and nothing here changes lights |
 | Bridge (pair) | First launch, or Settings › Bridge | IP field, the press-the-button instruction, Pair; then Paired and Show rooms |
 | Bridge not reachable | Any time the bridge doesn't answer | Message, Try again, Bridge settings |
@@ -46,6 +46,7 @@ Every screen fits one watch screen without scrolling. The one exception is the g
 - **Size:** shows every room and zone on the bridge, with none hidden. 1–4 tiles = two across (big tiles); 5–9 = three across; 10 or more = three across, scrolled by dragging. Never four across. Tiles are as large as the rows in use allow, so 5–6 rooms fill the screen's width.
 - **Tiles:** square, rounded. A lit tile fills with the room's current color, shows a dark icon and its brightness %. An off tile is dark gray and says Off.
 - **Icons:** chosen from each room's Hue archetype (sofa for living room, frying pan for kitchen (SF Symbols has no chef's hat), bed, monitor for office, door for front door, house for zones, and so on), with a bulb as the fallback. No name labels by default.
+- **Live updates while tapping:** for two seconds after the app changes a room, its own state wins over live updates for that room (the bridge can echo older or in-between states); the newest update is applied once that time is up.
 - **Tap** a tile to toggle that room. **Hold** it 0.5 s to open its Room screen; a hold never also toggles.
 - **All off:** one command to the bridge's all-lights group (`bridge_home`'s `grouped_light`), not one per tile.
 - **Order:** the user's order from Arrange. New rooms from the bridge go to the end.
@@ -69,7 +70,7 @@ Arrange tiles look like the grid's current state: lit rooms in their color, off 
 - **Rooms only:** the Crown changes rooms, never zones (a zone's bulbs usually belong to a room too). Zones are still shown and toggled by tap. The pill's count is rooms.
 - **Limits:** each room stops at 100%. A room that reaches 0% turns off.
 - **Back on at 0%:** tapping a room that was dimmed to 0% turns it on at 70%.
-- **Feedback:** a small pill ("Brighter · 4 on" or "Dimmer · 4 on") shows briefly next to the "Lights" title while turning. The Crown's scroll indicator is hidden.
+- **Feedback:** a small pill ("Brighter · 4 on" or "Dimmer · 4 on") shows briefly over the top of the grid while turning. The Crown's scroll indicator is hidden.
 - **Scrolling:** with 10 or more rooms the Crown still only changes brightness; the grid scrolls by dragging.
 
 **Room screen**

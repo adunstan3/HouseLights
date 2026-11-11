@@ -12,24 +12,19 @@ struct GridView: View {
     @FocusState private var crownFocused: Bool
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            HStack(spacing: 6) {
-                Text("Lights")
-                    .font(Theme.titleFont)
-                    .accessibilityAddTraits(.isHeader)
-                Spacer(minLength: 0)
-                if let pill { CrownPillView(pill: pill) }
-            }
-            .frame(height: 24)
-            GeometryReader { geo in
-                tiles(in: geo.size)
-            }
+        GeometryReader { geo in
+            tiles(in: geo.size)
+        }
+        .overlay(alignment: .top) {
+            if let pill { CrownPillView(pill: pill).padding(.top, 2) }
         }
         .padding(.horizontal, 3)
-        .padding(.top, Metrics.gridTop)
+        .padding(.top, 4)
         .padding(.bottom, 9)   // keeps the bottom corner tiles inside the screen's rounded corners
         .background(Theme.background)
-        .ignoresSafeArea(edges: [.top, .bottom])
+        .ignoresSafeArea(edges: .bottom)
+        // "Lights" sits centered under the clock, between the two toolbar buttons.
+        .navigationTitle("Lights")
         // System toolbar buttons sit in the top corners with the clock between them.
         .toolbar {
             ToolbarItem(placement: .topBarLeading) {
@@ -117,8 +112,9 @@ private struct CrownPillView: View {
             .lineLimit(1)
             .minimumScaleFactor(0.7)
             .padding(.horizontal, 8)
-            .frame(height: 22)
+            .frame(height: 24)
             .background(Capsule().fill(Theme.accent))
+            .shadow(color: .black.opacity(0.6), radius: 4)
             .transition(.opacity)
             .accessibilityIdentifier("crownPill")
     }

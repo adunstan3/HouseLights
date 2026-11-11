@@ -9,7 +9,7 @@ struct BridgeView: View {
     @State private var pairing: PairingModel?
 
     var body: some View {
-        Screen(title: "Bridge", showsBack: !isFirstLaunch) {
+        Screen(title: "Bridge", showsBack: !isFirstLaunch, backToGrid: true) {
             if let pairing {
                 content(pairing)
             }

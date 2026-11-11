@@ -112,3 +112,39 @@ struct ControlTests {
         app.stopEventStream()
     }
 }
+
+@MainActor
+struct SettleTests {
+    func groupedLight(_ id: String, on: Bool) -> HueEvent {
+        HueEvent(type: "update", data: [HueEventItem(id: id, type: "grouped_light", on: HueOn(on: on))])
+    }
+
+    /// The reported flash: a late update with the old state arrives just after a tap.
+    @Test func lateEchoDoesNotFlashATappedTile() async throws {
+        let (app, _) = ConnectionTests.makeApp(paired: true)
+        await app.start()
+        app.toggle("mock-room-0")                                     // on → off
+        try await Task.sleep(for: .milliseconds(300))                 // the command has gone out
+        app.apply([groupedLight("mock-group-0", on: true)])           // an older "on" arrives late
+        #expect(app.room("mock-room-0")?.isOn == false)
+    }
+
+    @Test func theBridgesLastWordWinsOnceSettled() async throws {
+        let (app, _) = ConnectionTests.makeApp(paired: true)
+        await app.start()
+        app.toggle("mock-room-0")
+        try await Task.sleep(for: .milliseconds(100))                 // the command has gone out
+        app.lastLocalChange["mock-room-0"] = Date().addingTimeInterval(-1.5)   // 0.5 s left to settle
+        app.apply([groupedLight("mock-group-0", on: true)])           // e.g. someone switched it back on
+        #expect(app.room("mock-room-0")?.isOn == false)               // still settling
+        #expect(await eventually(timeout: .seconds(3)) { app.room("mock-room-0")?.isOn == true })
+    }
+
+    @Test func otherRoomsStillUpdateLive() async {
+        let (app, _) = ConnectionTests.makeApp(paired: true)
+        await app.start()
+        app.toggle("mock-room-0")
+        app.apply([groupedLight("mock-group-2", on: true)])           // bedroom switched on elsewhere
+        #expect(app.room("mock-room-2")?.isOn == true)
+    }
+}
