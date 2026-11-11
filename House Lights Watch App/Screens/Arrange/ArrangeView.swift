@@ -59,6 +59,14 @@ struct ArrangeView: View {
         .contentShape(Rectangle())
         .gesture(dragGesture(layout))
         .animation(.spring(duration: 0.25), value: order)
+        .task(id: drag?.draggedID) {
+            // While a tile is held, check every 30 ms whether it has waited long enough on a
+            // new slot. (The finger can sit still, so this can't wait for drag events.)
+            while drag != nil, !Task.isCancelled {
+                if drag!.commitIfDue(now: .now) { order = drag!.order }
+                try? await Task.sleep(for: .milliseconds(30))
+            }
+        }
         .frame(maxWidth: .infinity, alignment: .top)
     }
 
@@ -69,13 +77,7 @@ struct ArrangeView: View {
                     drag = ArrangeDrag(order: order, layout: layout, at: g.startLocation)
                 }
                 guard drag != nil else { return }
-                if drag!.move(to: g.location, now: .now) {
-                    Task {
-                        try? await Task.sleep(for: .milliseconds(Int(ArrangeDrag.dwell * 1000)))
-                        guard drag != nil, drag!.commitIfDue(now: .now) else { return }
-                        order = drag!.order
-                    }
-                }
+                drag!.move(to: g.location, now: .now)
             }
             .onEnded { _ in
                 guard let finished = drag else { return }

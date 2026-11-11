@@ -70,3 +70,44 @@ struct ColorControlTests {
         #expect(app.room("mock-room-0")?.percent == 35)
     }
 }
+
+/// Changes on the Room screen reach the bridge while the finger or Crown is still moving
+/// (at most once a second per room), not when the screen is left.
+@MainActor
+struct LiveSendingTests {
+    @Test func warmthDragReachesTheBridgeWhileDragging() async throws {
+        let (app, mock) = ConnectionTests.makeApp(paired: true)
+        await app.start()
+        var seen: [LightColor?] = []
+        for step in 0..<25 {                                       // a 2.5 s drag, 100 ms per move
+            app.setWarmth(kelvin: 2200 + step * 150, roomID: "mock-room-0")
+            try await Task.sleep(for: .milliseconds(100))
+            let c = await mock.currentHome.lights["mock-light-0-a"]?.color
+            if seen.last != c { seen.append(c) }
+        }
+        #expect(seen.count >= 3)                                   // the lights changed during the drag
+        #expect(await eventually { await mock.currentHome.lights["mock-light-0-a"]?.color == app.room("mock-room-0")?.color })
+    }
+
+    @Test func crownBrightnessReachesTheBridgeWhileTurning() async throws {
+        let (app, mock) = ConnectionTests.makeApp(paired: true)
+        await app.start()
+        var levels: Set<Int> = []
+        for step in 0..<25 {
+            app.setBrightness(Double(70 - step), roomID: "mock-room-0")
+            try await Task.sleep(for: .milliseconds(100))
+            if let b = await mock.currentHome.lights["mock-light-0-a"]?.brightness { levels.insert(Int(b)) }
+        }
+        #expect(levels.count >= 3)
+        #expect(await eventually { await mock.currentHome.lights["mock-light-0-a"]?.brightness == 46 })
+    }
+
+    @Test func temporaryCardAppearsAsSoonAsTheColorChanges() async {
+        let (app, _) = ConnectionTests.makeApp(paired: true)
+        await app.start()
+        #expect(!app.isTemporary("mock-room-3"))
+        app.setColor(XY(x: 0.6, y: 0.35), roomID: "mock-room-3")
+        #expect(app.isTemporary("mock-room-3"))                    // observed property, no reload needed
+        #expect(app.temporaryRooms["mock-room-3"] != nil)
+    }
+}

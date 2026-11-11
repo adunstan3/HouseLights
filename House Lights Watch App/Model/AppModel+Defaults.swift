@@ -8,7 +8,7 @@ import Foundation
 /// and survives off/on because Hue bulbs keep their color when switched.
 extension AppModel {
     func defaultScene(_ roomID: String) -> DefaultScene? { home.defaults[roomID] ?? defaultsBeingCreated[roomID] }
-    func isTemporary(_ roomID: String) -> Bool { store.temporaryRooms[roomID] != nil }
+    func isTemporary(_ roomID: String) -> Bool { temporaryRooms[roomID] != nil }
 
     // MARK: Hooks from warmth/color changes
 
@@ -33,11 +33,11 @@ extension AppModel {
 
     /// After a warmth or color change: temporary unless it matches the default.
     func noteColorChange(_ roomID: String, color: LightColor, wasDefault: Bool) {
-        store.pendingDefaults.remove(roomID)
+        pendingDefaults.remove(roomID)
         if let d = defaultScene(roomID)?.color, d.isClose(to: color) {
-            store.temporaryRooms[roomID] = nil
+            temporaryRooms[roomID] = nil
         } else {
-            store.temporaryRooms[roomID] = color
+            temporaryRooms[roomID] = color
         }
     }
 
@@ -47,12 +47,12 @@ extension AppModel {
     /// off stays off; its default comes back the next time House Lights turns it on.
     func backToDefault(_ roomID: String) {
         guard let room = room(roomID), let scene = home.defaults[roomID] else { return }
-        store.temporaryRooms[roomID] = nil
+        temporaryRooms[roomID] = nil
         defaultsError = nil
         if room.isOn {
             recall(scene, in: room, brightness: room.brightness)
         } else {
-            store.pendingDefaults.insert(roomID)
+            pendingDefaults.insert(roomID)
             log.add(.info, "\(room.name) is off: default will apply when it's next turned on")
         }
     }
@@ -61,8 +61,8 @@ extension AppModel {
     func setAsDefault(_ roomID: String) {
         guard let room = room(roomID), let client else { return }
         let actions = DefaultScene.actions(for: home.lights(in: room), color: room.color)
-        store.temporaryRooms[roomID] = nil
-        store.pendingDefaults.remove(roomID)
+        temporaryRooms[roomID] = nil
+        pendingDefaults.remove(roomID)
         defaultsError = nil
         let name = DefaultScene.name(for: room.name)
         let existing = home.defaults[roomID]
@@ -85,8 +85,8 @@ extension AppModel {
 
     /// Turning on a room whose Back to default was tapped while off: recall its scene.
     func turnOnWithDefault(_ roomID: String) -> Bool {
-        guard store.pendingDefaults.contains(roomID), let room = room(roomID), let scene = home.defaults[roomID] else { return false }
-        store.pendingDefaults.remove(roomID)
+        guard pendingDefaults.contains(roomID), let room = room(roomID), let scene = home.defaults[roomID] else { return false }
+        pendingDefaults.remove(roomID)
         store.zeroDimmed.remove(roomID)
         recall(scene, in: room, brightness: room.brightness >= 1 ? room.brightness : CrownBrightness.backOnLevel)
         return true
@@ -120,7 +120,7 @@ extension AppModel {
     /// a switch, a power cut bringing bulbs back in warm white), and forgets a pending
     /// default if the room was switched on elsewhere.
     func checkTemporaryColors(_ roomIDs: Set<String>, turnedOnOutside: Set<String> = []) {
-        var temporary = store.temporaryRooms
+        var temporary = temporaryRooms
         for id in roomIDs {
             guard let set = temporary[id], let room = room(id), let now = room.color else { continue }
             if !now.isClose(to: set) {
@@ -128,16 +128,16 @@ extension AppModel {
                 log.add(.info, "\(room.name)'s color changed outside the app; no longer temporary")
             }
         }
-        if temporary != store.temporaryRooms { store.temporaryRooms = temporary }
-        let pending = store.pendingDefaults.intersection(turnedOnOutside)
-        if !pending.isEmpty { store.pendingDefaults.subtract(pending) }
+        if temporary != temporaryRooms { temporaryRooms = temporary }
+        let pending = pendingDefaults.intersection(turnedOnOutside)
+        if !pending.isEmpty { pendingDefaults.subtract(pending) }
     }
 
     /// After a reload: forget rooms that are gone and colors that changed while the app was closed.
     func afterReload() {
         let ids = Set(home.rooms.map(\.id))
-        store.temporaryRooms = store.temporaryRooms.filter { ids.contains($0.key) }
-        store.pendingDefaults = store.pendingDefaults.intersection(ids)
-        checkTemporaryColors(Set(store.temporaryRooms.keys))
+        temporaryRooms = temporaryRooms.filter { ids.contains($0.key) }
+        pendingDefaults = pendingDefaults.intersection(ids)
+        checkTemporaryColors(Set(temporaryRooms.keys))
     }
 }

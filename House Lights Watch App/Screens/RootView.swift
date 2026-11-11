@@ -13,6 +13,23 @@ struct RootView: View {
                 .navigationDestination(for: Route.self, destination: destination)
         }
         .environment(router)
+        .overlay(alignment: .bottom) {
+            if let notice = app.notice {
+                Text(notice)
+                    .font(.footnote.weight(.semibold))
+                    .foregroundStyle(Theme.onAccent)
+                    .multilineTextAlignment(.center)
+                    .lineLimit(2)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 6)
+                    .background(Capsule().fill(Theme.accent))
+                    .padding(.horizontal, 12)
+                    .padding(.bottom, 6)
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
+                    .accessibilityIdentifier("notice")
+            }
+        }
+        .animation(.easeOut(duration: 0.2), value: app.notice)
         .onChange(of: app.phase) { _, phase in
             // Bridge not reachable replaces whatever was open (unless the user is fixing the bridge).
             if case .unreachable = phase, !router.path.contains(.bridge) { router.popToRoot() }

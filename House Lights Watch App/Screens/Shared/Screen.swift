@@ -64,4 +64,6 @@ enum Metrics {
     static let clockClearance: CGFloat = 56
     static let cardRadius: CGFloat = 14
     static let buttonHeight: CGFloat = 34
+    /// The grid's "Lights" title sits just under the toolbar buttons beside the clock.
+    static let gridTop: CGFloat = 52
 }

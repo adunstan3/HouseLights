@@ -16,6 +16,7 @@ struct BrightnessCrown: ViewModifier {
             .focusEffectDisabled()
             .digitalCrownRotation($value, from: 0, through: 100, by: 1, sensitivity: .medium,
                                   isContinuous: false, isHapticFeedbackEnabled: true)
+            .digitalCrownAccessory(.hidden)   // no green scroll indicator; this isn't a scrolling page
             .onAppear {
                 value = current
                 focused = true

@@ -21,6 +21,9 @@ final class AppModel {
     private(set) var streamConnected = false
     /// Keeps the first-launch Bridge screen up after pairing, to show Paired and Show rooms.
     var showPairedConfirmation = false
+    /// A short message at the bottom of the screen when the bridge refuses a change.
+    private(set) var notice: String?
+    @ObservationIgnored private var noticeTask: Task<Void, Never>?
 
     let log: BridgeLog
     let store: SharedStore
@@ -46,10 +49,17 @@ final class AppModel {
         let cached = store.lastKnownRooms
         if !cached.isEmpty { home.rooms = cached }
         gridOrder = store.gridOrder
+        temporaryRooms = store.temporaryRooms
+        pendingDefaults = store.pendingDefaults
     }
 
     /// The user's grid order (room ids), kept here so the grid redraws when Arrange changes it.
-    var gridOrder: [String] = []
+    var gridOrder: [String] = [] { didSet { store.gridOrder = gridOrder } }
+    /// Rooms showing a temporary color (with the color set). Observed, so the Temporary
+    /// color card appears the moment a change makes a room temporary; saved to the App Group.
+    var temporaryRooms: [String: LightColor] = [:] { didSet { store.temporaryRooms = temporaryRooms } }
+    /// Rooms whose Back to default was tapped while off.
+    var pendingDefaults: Set<String> = [] { didSet { store.pendingDefaults = pendingDefaults } }
 
     /// Rooms and zones in the user's order.
     var rooms: [Room] { GridOrder.apply(gridOrder, to: home.rooms) }
@@ -82,7 +92,7 @@ final class AppModel {
             afterReload()
             if isActive { startEventStream() }
             // Siri learns the rooms' Hue names; the widget picks up their state.
-            HouseLightsShortcuts.updateAppShortcutParameters()
+            if !RuntimeEnvironment.isTesting { HouseLightsShortcuts.updateAppShortcutParameters() }
             WidgetCenter.shared.reloadAllTimelines()
         } catch {
             fail(error)
@@ -94,6 +104,19 @@ final class AppModel {
         if bridgeError.isUnreachable || bridgeError.needsRepair {
             phase = .unreachable(bridgeError.localizedDescription)
             stopEventStream()
+        } else if phase == .ready {
+            show(bridgeError == .rateLimited ? "The bridge is busy. Try again in a moment."
+                                             : "The bridge didn’t accept that change.")
+        }
+    }
+
+    /// Shows a notice for three seconds (details are in the Bridge log).
+    func show(_ message: String) {
+        notice = message
+        noticeTask?.cancel()
+        noticeTask = Task {
+            try? await Task.sleep(for: .seconds(3))
+            if !Task.isCancelled { notice = nil }
         }
     }
 
@@ -119,6 +142,9 @@ final class AppModel {
 
     func becameActive() {
         isActive = true
+        // Siri or the widget may have changed these while the app was in the background.
+        temporaryRooms = store.temporaryRooms
+        pendingDefaults = store.pendingDefaults
         guard phase == .ready else { return }
         Task { await reload() }   // catch up on anything missed while inactive
     }

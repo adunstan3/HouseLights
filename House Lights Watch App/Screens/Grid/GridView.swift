@@ -13,28 +13,54 @@ struct GridView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
-            ScreenHeader(title: "House Lights", showsBack: false)
-            GridButtonRow(pill: pill, onAllOff: app.allOff, onSettings: { router.push(.settings) })
+            HStack(spacing: 6) {
+                Text("Lights")
+                    .font(Theme.titleFont)
+                    .accessibilityAddTraits(.isHeader)
+                Spacer(minLength: 0)
+                if let pill { CrownPillView(pill: pill) }
+            }
+            .frame(height: 24)
             GeometryReader { geo in
                 tiles(in: geo.size)
             }
         }
-        .padding(.horizontal, Metrics.sideMargin)
-        .padding(.top, Metrics.headerTop)
-        .padding(.bottom, 6)
+        .padding(.horizontal, 3)
+        .padding(.top, Metrics.gridTop)
+        .padding(.bottom, 9)   // keeps the bottom corner tiles inside the screen's rounded corners
         .background(Theme.background)
         .ignoresSafeArea(edges: [.top, .bottom])
-        .toolbar(.hidden, for: .navigationBar)
+        // System toolbar buttons sit in the top corners with the clock between them.
+        .toolbar {
+            ToolbarItem(placement: .topBarLeading) {
+                Button(action: app.allOff) {
+                    Image(systemName: "power").font(.system(size: 15, weight: .bold)).foregroundStyle(.black)
+                }
+                .tint(.white)
+                .accessibilityLabel("All off")
+                .accessibilityIdentifier("allOff")
+            }
+            ToolbarItem(placement: .topBarTrailing) {
+                Button { router.push(.settings) } label: {
+                    Image(systemName: "gearshape.fill").font(.system(size: 15, weight: .bold)).foregroundStyle(.white)
+                }
+                .tint(Theme.secondaryButton)
+                .accessibilityLabel("Settings")
+                .accessibilityIdentifier("gear")
+            }
+        }
         .focusable()
         .focused($crownFocused)
         .focusEffectDisabled()
         .digitalCrownRotation($crown, from: -100_000, through: 100_000, by: 1, sensitivity: .low,
                               isContinuous: true, isHapticFeedbackEnabled: true)
+        .digitalCrownAccessory(.hidden)
         .onChange(of: crown) { _, value in crownMoved(to: value) }
         .onAppear { crownFocused = true }
         .task(id: pill?.id) {
             guard pill != nil else { return }
-            try? await Task.sleep(for: .seconds(1.2))
+            // `-pillSeconds 10` (debug) keeps it up long enough for UI tests to see it.
+            try? await Task.sleep(for: .seconds(RuntimeEnvironment.debugValue("pillSeconds").flatMap(Double.init) ?? 1.2))
             if !Task.isCancelled { withAnimation { pill = nil } }
         }
     }
@@ -80,59 +106,21 @@ struct CrownPill: Equatable {
     var text: String { "\(brighter ? "Brighter" : "Dimmer") · \(count) on" }
 }
 
-/// The row under the clock: the Crown pill on the left, all-off and Settings on the right.
-private struct GridButtonRow: View {
-    let pill: CrownPill?
-    let onAllOff: () -> Void
-    let onSettings: () -> Void
+/// The Crown feedback pill, next to the title.
+private struct CrownPillView: View {
+    let pill: CrownPill
 
     var body: some View {
-        HStack(spacing: 6) {
-            if let pill {
-                Text(pill.text)
-                    .font(.footnote.weight(.semibold))
-                    .foregroundStyle(Theme.onAccent)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.7)
-                    .padding(.horizontal, 8)
-                    .frame(height: 24)
-                    .background(Capsule().fill(Theme.accent))
-                    .transition(.opacity)
-                    .accessibilityIdentifier("crownPill")
-            }
-            Spacer(minLength: 0)
-            RoundIconButton(systemName: "power", fill: .white, foreground: .black, label: "All off", id: "allOff", action: onAllOff)
-            RoundIconButton(systemName: "gearshape.fill", fill: Theme.secondaryButton, foreground: .white,
-                            label: "Settings", id: "gear", action: onSettings)
-        }
-        .frame(height: 30)
-    }
-}
-
-/// A 30 pt round button with a 44 pt tap area, as a tap gesture so it never shares a target.
-struct RoundIconButton: View {
-    let systemName: String
-    let fill: Color
-    let foreground: Color
-    let label: String
-    let id: String
-    let action: () -> Void
-
-    var body: some View {
-        Image(systemName: systemName)
-            .font(.system(size: 14, weight: .bold))
-            .foregroundStyle(foreground)
-            .frame(width: 30, height: 30)
-            .background(Circle().fill(fill))
-            .padding(4)
-            .contentShape(Rectangle())
-            .padding(-4)
-            .onTapGesture(perform: action)
-            .accessibilityElement(children: .ignore)
-            .accessibilityLabel(label)
-            .accessibilityAddTraits(.isButton)
-            .accessibilityIdentifier(id)
-            .accessibilityAction { action() }
+        Text(pill.text)
+            .font(.footnote.weight(.semibold))
+            .foregroundStyle(Theme.onAccent)
+            .lineLimit(1)
+            .minimumScaleFactor(0.7)
+            .padding(.horizontal, 8)
+            .frame(height: 22)
+            .background(Capsule().fill(Theme.accent))
+            .transition(.opacity)
+            .accessibilityIdentifier("crownPill")
     }
 }
 

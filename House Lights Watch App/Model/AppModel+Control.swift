@@ -78,7 +78,6 @@ extension AppModel {
     /// Arrange: the grid order. Rooms the bridge adds later go to the end.
     func saveOrder(_ ids: [String]) {
         gridOrder = ids
-        store.gridOrder = ids
         log.add(.info, "Saved grid order")
     }
 

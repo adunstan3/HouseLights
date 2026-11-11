@@ -51,6 +51,16 @@ struct ArrangeDragTests {
         #expect(drag.order == ["b", "c", "a", "d", "e", "f"])
     }
 
+    @Test func wobblingOutOfTheMiddleStillMovesAfterTheWait() throws {
+        // The reported bug: the finger drifts to the edge of the slot it's holding over.
+        var drag = try #require(ArrangeDrag(order: order, layout: layout, at: center(0)))
+        drag.move(to: center(1), now: t0)
+        drag.move(to: CGPoint(x: 59, y: 25), now: t0.addingTimeInterval(0.1))   // still on slot 1, outside its middle
+        let moved = drag.commitIfDue(now: t0.addingTimeInterval(0.2))
+        #expect(moved)
+        #expect(drag.order == ["b", "a", "c", "d", "e", "f"])
+    }
+
     @Test func leavingTheCandidateBeforeTheWaitCancelsTheMove() throws {
         var drag = try #require(ArrangeDrag(order: order, layout: layout, at: center(0)))
         drag.move(to: center(1), now: t0)

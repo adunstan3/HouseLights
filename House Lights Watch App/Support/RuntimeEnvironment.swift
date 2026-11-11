@@ -8,6 +8,7 @@ import Foundation
 /// - `-mockOffline YES`    the mock bridge doesn't answer (Bridge not reachable)
 /// - `-mockOutsideChanges YES` the mock flips a room every 15 s, like a wall switch
 /// - `-mockTemporary YES`  the living room starts with a temporary color
+/// - `-pillSeconds 10`     keep the Crown pill up longer (UI tests)
 /// - `-realBridge YES`     use the real bridge client even in the simulator
 /// - `-openScreen name`    settings, bridge, log, arrange, room, wheel
 /// - `-openRoom "Name"`    which room `room`/`wheel` open (default the first)

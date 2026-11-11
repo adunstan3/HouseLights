@@ -45,11 +45,15 @@ nonisolated struct ArrangeDrag: Sendable, Equatable {
     }
 
     /// The finger moved. Returns true when a new candidate slot starts its 150 ms wait.
+    /// A slot becomes the candidate only from its middle 60%; it stays the candidate while
+    /// the finger is anywhere on that slot, and is dropped if the finger leaves it.
     @discardableResult
     mutating func move(to p: CGPoint, now: Date) -> Bool {
         point = p
         let hot = Self.slot(containing: p, layout: layout, count: order.count, hotOnly: true)
-        guard let hot else { return false }   // between slots (outside every middle 60%): no change
+        let on = Self.slot(containing: p, layout: layout, count: order.count, hotOnly: false)
+        if let c = candidate, on != c { candidate = nil; candidateSince = nil }
+        guard let hot else { return false }
         if hot == target { candidate = nil; candidateSince = nil; return false }
         guard hot != candidate else { return false }
         candidate = hot
@@ -57,10 +61,11 @@ nonisolated struct ArrangeDrag: Sendable, Equatable {
         return true
     }
 
-    /// After the wait: moves the dragged tile into the candidate slot if the finger is still on it.
+    /// Called often while dragging (the view ticks every 30 ms): once the finger has been on
+    /// the candidate slot for 150 ms, moves the dragged tile there.
     mutating func commitIfDue(now: Date) -> Bool {
         guard let c = candidate, let since = candidateSince, now.timeIntervalSince(since) >= Self.dwell - 0.001 else { return false }
-        guard Self.slot(containing: point, layout: layout, count: order.count, hotOnly: true) == c else { return false }
+        guard Self.slot(containing: point, layout: layout, count: order.count, hotOnly: false) == c else { return false }
         order.remove(at: target)
         order.insert(draggedID, at: c)
         target = c
@@ -75,7 +80,7 @@ extension GridLayout {
     /// with tiles shrunk to fit when there are more than nine.
     nonisolated static func fitting(count: Int, width: CGFloat, height: CGFloat, spacing: CGFloat = 6) -> GridLayout {
         var layout = make(count: count, width: width, height: height, spacing: spacing)
-        let rows = max(layout.columns, Int((Double(count) / Double(layout.columns)).rounded(.up)))
+        let rows = max(Int((Double(count) / Double(layout.columns)).rounded(.up)), 1)
         let byHeight = (height - spacing * CGFloat(rows - 1)) / CGFloat(rows)
         layout.tile = max(floor(min(layout.tile, byHeight)), 24)
         layout.scrolls = false

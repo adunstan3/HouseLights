@@ -70,3 +70,16 @@ struct ConnectionTests {
         #expect(app.credentials == nil)
     }
 }
+
+@MainActor
+struct NoticeTests {
+    @Test func refusedChangesShowANoticeAndKeepTheGrid() async {
+        let (app, _) = ConnectionTests.makeApp(paired: true)
+        await app.start()
+        app.fail(BridgeError.http(400, "invalid value"))
+        #expect(app.phase == .ready)
+        #expect(app.notice == "The bridge didn’t accept that change.")
+        app.fail(BridgeError.unreachable("timed out"))
+        guard case .unreachable = app.phase else { Issue.record("expected Bridge not reachable"); return }
+    }
+}

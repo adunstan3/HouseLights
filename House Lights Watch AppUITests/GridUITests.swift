@@ -40,11 +40,18 @@ final class GridUITests: XCTestCase {
     }
 
     func testCrownBrightensRoomsThatAreOn() {
-        let app = launch()
+        let app = launch(["-pillSeconds", "10"])
         let living = tile(app, "Living room")
         let bedroom = tile(app, "Bedroom")
         XCTAssertTrue(living.waitForExistence(timeout: 20))
         XCUIDevice.shared.rotateDigitalCrown(delta: 0.5)
+        let pill = app.descendants(matching: .any)["crownPill"].firstMatch
+        XCTAssertTrue(pill.waitForExistence(timeout: 5), "the Brighter/Dimmer pill shows while turning")
+        let shot = XCTAttachment(screenshot: app.screenshot())
+        shot.name = "crown-pill"
+        shot.lifetime = .keepAlways
+        add(shot)
+        XCTAssertEqual(pill.label, "Brighter · 3 on")   // living room, kitchen, office; zones don't count
         let brighter = NSPredicate(format: "value != '70 percent'")
         expectation(for: brighter, evaluatedWith: living)
         waitForExpectations(timeout: 5)

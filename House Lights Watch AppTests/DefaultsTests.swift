@@ -14,7 +14,7 @@ struct DefaultsTests {
         let (app, mock) = await ready()
         #expect(app.home.defaults["mock-room-3"] == nil)                       // Office has no default yet
         app.setWarmth(kelvin: 3000, roomID: "mock-room-3")
-        try await Task.sleep(for: .milliseconds(100))
+        #expect(await eventually { await mock.currentHome.defaults["mock-room-3"] != nil })
         let scene = try #require(await mock.currentHome.defaults["mock-room-3"])
         #expect(scene.name == "House Lights – Office")
         #expect(scene.color == .xy(XY(x: 0.235, y: 0.235)))                    // the blue it had before
@@ -45,10 +45,8 @@ struct DefaultsTests {
         app.backToDefault("mock-room-0")
         #expect(!app.isTemporary("mock-room-0"))
         #expect(app.room("mock-room-0")?.color == .temperature(mirek: 370))
-        try await Task.sleep(for: .milliseconds(100))
-        let light = try #require(await mock.currentHome.lights["mock-light-0-a"])
-        #expect(light.color == .temperature(mirek: 370))
-        #expect(light.brightness == 70)
+        #expect(await eventually { await mock.currentHome.lights["mock-light-0-a"]?.color == .temperature(mirek: 370) })
+        #expect(await mock.currentHome.lights["mock-light-0-a"]?.brightness == 70)
     }
 
     @Test func backToDefaultWhileOffWaitsForTheNextTurnOn() async throws {
@@ -62,9 +60,10 @@ struct DefaultsTests {
         try await Task.sleep(for: .milliseconds(100))
         #expect(await mock.currentHome.room("mock-room-0")?.isOn == false)
         app.toggle("mock-room-0")                                                 // on → default
-        try await Task.sleep(for: .milliseconds(100))
-        let light = try #require(await mock.currentHome.lights["mock-light-0-a"])
-        #expect(light.isOn && light.color == .temperature(mirek: 370))
+        #expect(await eventually {
+            let light = await mock.currentHome.lights["mock-light-0-a"]
+            return light?.isOn == true && light?.color == .temperature(mirek: 370)
+        })
         #expect(!app.store.pendingDefaults.contains("mock-room-0"))
     }
 
@@ -73,8 +72,7 @@ struct DefaultsTests {
         app.setWarmth(kelvin: 4000, roomID: "mock-room-0")
         app.setAsDefault("mock-room-0")
         #expect(!app.isTemporary("mock-room-0"))
-        try await Task.sleep(for: .milliseconds(100))
-        #expect(await mock.currentHome.defaults["mock-room-0"]?.color == .temperature(mirek: 250))
+        #expect(await eventually { await mock.currentHome.defaults["mock-room-0"]?.color == .temperature(mirek: 250) })
     }
 
     @Test func colorChangedOutsideTheAppDropsTheTemporaryLabel() async throws {
@@ -86,8 +84,7 @@ struct DefaultsTests {
         #expect(app.isTemporary("mock-room-0"))
         app.lastLocalChange["mock-room-0"] = .distantPast                        // pretend it was a while ago
         await mock.simulateOutsideColor(roomID: "mock-room-0", color: .temperature(mirek: 366))   // power-cut warm white
-        try await Task.sleep(for: .milliseconds(100))
-        #expect(!app.isTemporary("mock-room-0"))
+        #expect(await eventually { !app.isTemporary("mock-room-0") })
         app.stopEventStream()
     }
 
