@@ -66,8 +66,7 @@ struct ControlTests {
         let (app, mock) = await ready()
         app.toggle("mock-room-0")
         #expect(app.room("mock-room-0")?.isOn == false)   // immediately
-        try await Task.sleep(for: .milliseconds(100))
-        #expect(await mock.currentHome.room("mock-room-0")?.isOn == false)
+                #expect(await eventually { await mock.currentHome.room("mock-room-0")?.isOn == false })
     }
 
     @Test func roomDimmedToZeroComesBackAtSeventy() async throws {
@@ -87,9 +86,7 @@ struct ControlTests {
         let (app, mock) = await ready()
         app.allOff()
         #expect(app.rooms.allSatisfy { !$0.isOn })
-        try await Task.sleep(for: .milliseconds(100))
-        let home = await mock.currentHome
-        #expect(home.lights.values.allSatisfy { !$0.isOn })
+        #expect(await eventually { await mock.currentHome.lights.values.allSatisfy { !$0.isOn } })
     }
 
     @Test func crownKeepsDifferencesBetweenRooms() async {
@@ -108,11 +105,10 @@ struct ControlTests {
         app.startEventStream()
         try await Task.sleep(for: .milliseconds(50))
         await mock.simulateOutsideChange()
-        try await Task.sleep(for: .milliseconds(100))
         let home = await mock.currentHome
-        for room in home.rooms where room.kind == .room {
-            #expect(app.room(room.id)?.isOn == room.isOn)
-        }
+        func matches() -> Bool { home.rooms.filter { $0.kind == .room }.allSatisfy { app.room($0.id)?.isOn == $0.isOn } }
+        for _ in 0..<20 where !matches() { try await Task.sleep(for: .milliseconds(50)) }
+        #expect(matches())
         app.stopEventStream()
     }
 }

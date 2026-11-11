@@ -43,10 +43,14 @@ final class AppModel {
         self.log = log
         let cached = store.lastKnownRooms
         if !cached.isEmpty { home.rooms = cached }
+        gridOrder = store.gridOrder
     }
 
+    /// The user's grid order (room ids), kept here so the grid redraws when Arrange changes it.
+    var gridOrder: [String] = []
+
     /// Rooms and zones in the user's order.
-    var rooms: [Room] { GridOrder.apply(store.gridOrder, to: home.rooms) }
+    var rooms: [Room] { GridOrder.apply(gridOrder, to: home.rooms) }
 
     var isActive = false
 

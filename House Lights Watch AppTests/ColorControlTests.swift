@@ -47,8 +47,7 @@ struct ColorControlTests {
         await app.start()
         app.setWarmth(kelvin: 2000, roomID: "mock-room-0")          // below 2200 K → room's warmest (454)
         #expect(app.room("mock-room-0")?.color == .temperature(mirek: 454))
-        try await Task.sleep(for: .milliseconds(100))
-        #expect(await mock.currentHome.lights["mock-light-0-a"]?.color == .temperature(mirek: 454))
+                #expect(await eventually { await mock.currentHome.lights["mock-light-0-a"]?.color == .temperature(mirek: 454) })
     }
 
     @Test func colorTurnsAnOffRoomOn() async throws {
@@ -58,8 +57,7 @@ struct ColorControlTests {
         app.setColor(xy, roomID: "mock-room-4")                       // Front door, off
         #expect(app.room("mock-room-4")?.isOn == true)
         #expect(app.room("mock-room-4")?.color == .xy(xy))
-        try await Task.sleep(for: .milliseconds(100))
-        #expect(await mock.currentHome.room("mock-room-4")?.isOn == true)
+                #expect(await eventually { await mock.currentHome.room("mock-room-4")?.isOn == true })
     }
 
     @Test func roomScreenBrightnessToZeroTurnsOff() async {

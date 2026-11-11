@@ -75,6 +75,13 @@ extension AppModel {
         store.lastKnownRooms = home.rooms
     }
 
+    /// Arrange: the grid order. Rooms the bridge adds later go to the end.
+    func saveOrder(_ ids: [String]) {
+        gridOrder = ids
+        store.gridOrder = ids
+        log.add(.info, "Saved grid order")
+    }
+
     // MARK: Helpers
 
     func update(_ roomID: String, _ change: (inout Room) -> Void) {

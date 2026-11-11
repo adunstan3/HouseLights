@@ -38,7 +38,7 @@ struct RootView: View {
         case .settings: SettingsView()
         case .bridge: BridgeView()
         case .log: BridgeLogView()
-        case .arrange: ScreenPlaceholder(title: "Arrange")
+        case .arrange: ArrangeView()
         case .room(let id): RoomView(roomID: id)
         case .colorWheel(let id): ColorWheelView(roomID: id)
         }
@@ -60,10 +60,4 @@ struct RootView: View {
         default: break
         }
     }
-}
-
-/// Stand-in for screens built in later milestones.
-private struct ScreenPlaceholder: View {
-    let title: String
-    var body: some View { Screen(title: title) { Text("Coming soon").font(.footnote) } }
 }
