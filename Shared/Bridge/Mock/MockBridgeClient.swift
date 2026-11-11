@@ -121,6 +121,20 @@ actor MockBridgeClient: BridgeClient {
         emit(items)
     }
 
+    /// Sets a room's color as the Hue app (or a power cut) would.
+    func simulateOutsideColor(roomID: String, color: LightColor) {
+        guard let room = home.room(roomID) else { return }
+        var items: [HueEventItem] = []
+        for lid in room.lightIDs {
+            guard var light = home.lights[lid] else { continue }
+            light.color = color
+            home.lights[lid] = light
+            items.append(lightItem(light))
+        }
+        items += refreshGroups()
+        emit(items)
+    }
+
     // MARK: Helpers
 
     private func respond(_ what: String) async throws {

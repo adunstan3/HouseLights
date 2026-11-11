@@ -11,7 +11,7 @@ struct RoomView: View {
     var body: some View {
         if let room = app.room(roomID) {
             Screen(title: room.name) {
-                VStack(alignment: .leading, spacing: 7) {
+                VStack(alignment: .leading, spacing: 6) {
                     RoomTopRow(room: room) { app.toggle(roomID) }
                     WarmthSlider(room: room) { app.setWarmth(kelvin: $0, roomID: roomID) }
                     ColorWheelRow(enabled: room.supportsColor) { router.push(.colorWheel(roomID)) }
@@ -35,9 +35,9 @@ struct RoomTopRow: View {
     var body: some View {
         HStack(spacing: 8) {
             Image(systemName: "power")
-                .font(.system(size: 18, weight: .bold))
+                .font(.system(size: 17, weight: .bold))
                 .foregroundStyle(room.isOn ? Theme.onAccent : .white)
-                .frame(width: 40, height: 40)
+                .frame(width: 36, height: 36)
                 .background(Circle().fill(room.isOn ? room.displayColor.tileColor : Theme.secondaryButton))
                 .padding(2)
                 .contentShape(Circle())
@@ -50,7 +50,7 @@ struct RoomTopRow: View {
             VStack(alignment: .leading, spacing: 4) {
                 HStack(alignment: .firstTextBaseline) {
                     Text(room.isOn ? "\(room.percent)%" : "Off")
-                        .font(.system(size: 26, weight: .bold))
+                        .font(.system(size: 24, weight: .bold))
                         .monospacedDigit()
                         .accessibilityIdentifier("brightness")
                     Spacer(minLength: 2)
@@ -106,7 +106,7 @@ struct ColorWheelRow: View {
                 .foregroundStyle(Theme.secondaryText)
         }
         .padding(.horizontal, 8)
-        .frame(height: 38)
+        .frame(height: 34)
         .background(RoundedRectangle(cornerRadius: Metrics.cardRadius).fill(Theme.card))
         .opacity(enabled ? 1 : 0.5)
         .contentShape(RoundedRectangle(cornerRadius: Metrics.cardRadius))

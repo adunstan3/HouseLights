@@ -10,7 +10,7 @@ struct WarmthSlider: View {
     private var kelvin: Int? { dragKelvin ?? room.color?.kelvin }
 
     var body: some View {
-        VStack(spacing: 4) {
+        VStack(spacing: 2) {
             HStack {
                 Text("WARMTH")
                     .font(.footnote.weight(.semibold))
@@ -36,7 +36,7 @@ struct WarmthSlider: View {
                             .offset(x: (width - 20) * WarmthScale.fraction(ofKelvin: kelvin))
                     }
                 }
-                .frame(height: 22)
+                .frame(height: 20)
                 .contentShape(Rectangle())
                 .gesture(
                     DragGesture(minimumDistance: 0)
@@ -47,7 +47,7 @@ struct WarmthSlider: View {
                         .onEnded { _ in dragKelvin = nil }
                 )
             }
-            .frame(height: 22)
+            .frame(height: 20)
         }
         .disabled(!room.supportsWarmth)
         .opacity(room.supportsWarmth ? 1 : 0.4)

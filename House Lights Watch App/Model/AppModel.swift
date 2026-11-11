@@ -29,6 +29,10 @@ final class AppModel {
     private var reloadTask: Task<Void, Never>?
     /// When the app last sent something to each room, so stream echoes aren't mistaken for outside changes.
     var lastLocalChange: [String: Date] = [:]
+    /// Default scenes being created on the bridge (used for comparisons until the bridge answers).
+    var defaultsBeingCreated: [String: DefaultScene] = [:]
+    /// The last error from a defaults action, shown on the Room screen.
+    var defaultsError: String?
     @ObservationIgnored lazy var sender = CommandSender { [weak self] id, command in
         await self?.deliver(command, to: id)
     }
@@ -75,9 +79,6 @@ final class AppModel {
             fail(error)
         }
     }
-
-    /// Hook for later milestones (temporary-color bookkeeping).
-    func afterReload() {}
 
     func fail(_ error: any Error) {
         let bridgeError = error as? BridgeError ?? .unreachable(error.localizedDescription)
@@ -169,10 +170,14 @@ final class AppModel {
         }
     }
 
-    /// Bookkeeping after live updates: a room switched on from outside no longer counts as "dimmed to 0".
+    /// Bookkeeping after live updates from outside the app (ignoring echoes of our own commands
+    /// for 3 s): a room switched on elsewhere is no longer "dimmed to 0", and a color changed
+    /// elsewhere is no longer temporary.
     func roomsChangedFromStream(_ ids: Set<String>) {
-        let lit = ids.filter { home.room($0)?.isOn == true }
+        let quiet = ids.filter { Date().timeIntervalSince(lastLocalChange[$0] ?? .distantPast) > 3 }
+        let lit = quiet.filter { home.room($0)?.isOn == true }
         if !lit.isEmpty { store.zeroDimmed.subtract(lit) }
+        checkTemporaryColors(quiet, turnedOnOutside: lit)
     }
 
     private func scheduleReload() {

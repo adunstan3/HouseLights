@@ -7,6 +7,7 @@ import Foundation
 /// - `-unpaired YES`       start as if no bridge is paired
 /// - `-mockOffline YES`    the mock bridge doesn't answer (Bridge not reachable)
 /// - `-mockOutsideChanges YES` the mock flips a room every 15 s, like a wall switch
+/// - `-mockTemporary YES`  the living room starts with a temporary color
 /// - `-realBridge YES`     use the real bridge client even in the simulator
 /// - `-openScreen name`    settings, bridge, log, arrange, room, wheel
 /// - `-openRoom "Name"`    which room `room`/`wheel` open (default the first)

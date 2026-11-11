@@ -44,6 +44,10 @@ struct BridgeEnvironment {
         let tiles = RuntimeEnvironment.debugValue("mockTiles").flatMap(Int.init) ?? 6
         let client = MockBridgeClient(home: MockHome.sample(tiles: tiles),
                                       reachable: !RuntimeEnvironment.flag("mockOffline"), log: log)
+        if RuntimeEnvironment.flag("mockTemporary") {
+            // The living room shows 2200 K while its default is 2700 K.
+            store.temporaryRooms = ["mock-room-0": .temperature(mirek: 454)]
+        }
         if RuntimeEnvironment.flag("mockOutsideChanges") {
             Task {
                 while true {
