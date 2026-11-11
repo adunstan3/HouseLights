@@ -1,16 +1,19 @@
 import SwiftUI
 
-/// Colors from SPEC.md's Look section.
+/// Colors and type from SPEC.md's Look section.
 nonisolated enum Theme {
     /// Amber, for back arrows, main buttons and highlights.
     static let accent = Color(hex: 0xFFB65C)
-    /// Dark text drawn on amber.
+    /// Dark text drawn on amber and on lit tiles.
     static let onAccent = Color(hex: 0x1A1400)
     static let background = Color.black
     /// Cards and off tiles.
     static let card = Color(hex: 0x1C1C1E)
     /// Secondary buttons.
     static let secondaryButton = Color(hex: 0x2C2C2E)
+    static let secondaryText = Color(white: 0.72)
+
+    static let titleFont = Font.system(size: 18, weight: .bold)
 }
 
 extension Color {
@@ -21,5 +24,41 @@ extension Color {
             green: Double((hex >> 8) & 0xFF) / 255,
             blue: Double(hex & 0xFF) / 255
         )
+    }
+
+    nonisolated init(_ rgb: RGB) {
+        self.init(red: rgb.r, green: rgb.g, blue: rgb.b)
+    }
+}
+
+extension LightColor {
+    /// The color a lit tile or swatch is filled with: the light's color, softened a little
+    /// toward white so the dark icon stays readable (as in the mockups).
+    var tileColor: Color { Color(rgb.mixed(with: .white, amount: 0.25)) }
+    /// The pure color, for small swatches.
+    var swatchColor: Color { Color(rgb) }
+}
+
+/// Amber, full-width main button with dark text.
+struct PrimaryButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .font(.system(size: 16, weight: .semibold))
+            .foregroundStyle(Theme.onAccent)
+            .frame(maxWidth: .infinity, minHeight: Metrics.buttonHeight)
+            .background(Capsule().fill(Theme.accent.opacity(configuration.isPressed ? 0.7 : 1)))
+            .contentShape(Capsule())
+    }
+}
+
+/// Dark gray, full-width secondary button.
+struct SecondaryButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .font(.system(size: 16, weight: .semibold))
+            .foregroundStyle(.white)
+            .frame(maxWidth: .infinity, minHeight: Metrics.buttonHeight)
+            .background(Capsule().fill(Theme.secondaryButton.opacity(configuration.isPressed ? 0.6 : 1)))
+            .contentShape(Capsule())
     }
 }

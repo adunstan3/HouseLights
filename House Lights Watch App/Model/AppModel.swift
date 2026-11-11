@@ -17,6 +17,8 @@ final class AppModel {
     var home: HomeSnapshot = .empty
     private(set) var credentials: BridgeCredentials?
     private(set) var streamConnected = false
+    /// Keeps the first-launch Bridge screen up after pairing, to show Paired and Show rooms.
+    var showPairedConfirmation = false
 
     let log: BridgeLog
     let store: SharedStore

@@ -1,39 +1,63 @@
 import SwiftUI
 
-/// Milestone 1 stand-in: shows what the bridge layer loaded, with a link to the log.
-/// Milestone 2 replaces this with first-launch routing; milestone 3 adds the grid.
+/// Routes between first launch (Bridge), Bridge not reachable and the Rooms grid, and
+/// registers every pushed screen once.
 struct RootView: View {
-    @Environment(AppModel.self) private var model
+    @Environment(AppModel.self) private var app
+    @State private var router = Router()
+    @State private var didOpenDebugScreen = false
 
     var body: some View {
-        NavigationStack {
-            List {
-                Section {
-                    Text(status)
-                        .font(.footnote)
-                }
-                ForEach(model.rooms) { room in
-                    HStack {
-                        Image(systemName: room.iconName)
-                        Text(room.name)
-                        Spacer()
-                        Text(room.isOn ? "\(room.percent)%" : "Off")
-                            .foregroundStyle(.secondary)
-                    }
-                    .font(.footnote)
-                }
-                NavigationLink("Bridge log") { BridgeLogView() }
-            }
-            .navigationTitle("House Lights")
+        NavigationStack(path: $router.path) {
+            home
+                .navigationDestination(for: Route.self, destination: destination)
+        }
+        .environment(router)
+        .onChange(of: app.phase) { _, phase in
+            // Bridge not reachable replaces whatever was open (unless the user is fixing the bridge).
+            if case .unreachable = phase, !router.path.contains(.bridge) { router.popToRoot() }
+        }
+        .task(id: app.phase) { openDebugScreen() }
+    }
+
+    @ViewBuilder private var home: some View {
+        if app.showPairedConfirmation || app.phase == .unpaired {
+            BridgeView(isFirstLaunch: true)
+        } else if case .unreachable(let reason) = app.phase {
+            UnreachableView(reason: reason)
+        } else if app.home.rooms.isEmpty && app.phase != .ready {
+            ProgressView()
+                .toolbar(.hidden, for: .navigationBar)
+        } else {
+            GridView()
         }
     }
 
-    private var status: String {
-        switch model.phase {
-        case .starting, .loading: "Loading…"
-        case .unpaired: "Not paired"
-        case .ready: model.streamConnected ? "Live" : "Loaded"
-        case .unreachable(let why): why
+    @ViewBuilder private func destination(_ route: Route) -> some View {
+        switch route {
+        case .settings: SettingsView()
+        case .bridge: BridgeView()
+        case .log: BridgeLogView()
+        case .arrange: Text("Arrange")
+        case .room: Text("Room")
+        case .colorWheel: Text("Color wheel")
+        }
+    }
+
+    /// `-openScreen settings|bridge|log|arrange|room|wheel` and `-openRoom "Name"` (debug only).
+    private func openDebugScreen() {
+        guard !didOpenDebugScreen, app.phase == .ready, let screen = RuntimeEnvironment.debugValue("openScreen") else { return }
+        didOpenDebugScreen = true
+        let roomName = RuntimeEnvironment.debugValue("openRoom")
+        let roomID = (app.rooms.first { $0.name == roomName } ?? app.rooms.first)?.id ?? ""
+        switch screen {
+        case "settings": router.path = [.settings]
+        case "bridge": router.path = [.settings, .bridge]
+        case "log": router.path = [.settings, .bridge, .log]
+        case "arrange": router.path = [.settings, .arrange]
+        case "room": router.path = [.room(roomID)]
+        case "wheel": router.path = [.room(roomID), .colorWheel(roomID)]
+        default: break
         }
     }
 }
