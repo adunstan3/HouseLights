@@ -1,1 +1,0 @@
-// Milestone 1: the bridge client protocol, the real HTTPS client, certificate trust, pairing, the per-room sender, the event stream and the request log. Shared with the widget extension in milestone 7. Delete this file when real code lands.

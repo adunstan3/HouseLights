@@ -1,0 +1,69 @@
+import Foundation
+import Testing
+@testable import House_Lights_Watch_App
+
+struct PairingTests {
+    /// A bridge whose button is "pressed" after `pressAfter` attempts.
+    actor FakeBridge: BridgeClient {
+        var attempts = 0
+        let pressAfter: Int
+        let failWith: BridgeError?
+        init(pressAfter: Int, failWith: BridgeError? = nil) { self.pressAfter = pressAfter; self.failWith = failWith }
+
+        func pair(ip: String) async throws -> PairingAttempt {
+            attempts += 1
+            if let failWith { throw failWith }
+            return attempts > pressAfter ? .paired(PairedBridge(ip: ip, applicationKey: "k", certificateHash: nil)) : .linkButtonNotPressed
+        }
+        func fetchHome() async throws -> HomeSnapshot { .empty }
+        func send(_ command: GroupedLightCommand, toGroupedLight id: String) async throws {}
+        func createScene(name: String, roomID: String, actions: [HueSceneAction]) async throws -> String { "" }
+        func updateScene(id: String, actions: [HueSceneAction]) async throws {}
+        func recallScene(id: String, brightness: Double?) async throws {}
+        nonisolated func events() -> AsyncThrowingStream<[HueEvent], any Error> { AsyncThrowingStream { $0.finish() } }
+    }
+
+    @Test func retriesUntilTheButtonIsPressed() async throws {
+        let bridge = FakeBridge(pressAfter: 3)
+        let outcome = try await Pairing.run(client: bridge, ip: "10.0.0.2", sleep: { _ in })
+        #expect(outcome == .paired(PairedBridge(ip: "10.0.0.2", applicationKey: "k", certificateHash: nil)))
+        #expect(await bridge.attempts == 4)
+    }
+
+    @Test func givesUpAfterThirtySeconds() async throws {
+        let bridge = FakeBridge(pressAfter: 100)
+        let outcome = try await Pairing.run(client: bridge, ip: "10.0.0.2", sleep: { _ in })
+        #expect(outcome == .timedOut)
+        #expect(await bridge.attempts == 16)   // at 0, 2, 4 … 30 s
+    }
+
+    @Test func stopsAtOnceWhenNoBridgeAnswers() async {
+        let bridge = FakeBridge(pressAfter: 0, failWith: .unreachable("no answer"))
+        await #expect(throws: BridgeError.unreachable("no answer")) {
+            try await Pairing.run(client: bridge, ip: "10.0.0.9", sleep: { _ in })
+        }
+        #expect(await bridge.attempts == 1)
+    }
+
+    @Test func decodesPairingReplies() throws {
+        let ok = try JSONDecoder().decode([HuePairingReply].self, from: Data(#"[{"success":{"username":"abc","clientkey":"DEF"}}]"#.utf8))
+        #expect(ok.first?.success?.username == "abc")
+        let wait = try JSONDecoder().decode([HuePairingReply].self, from: Data(#"[{"error":{"type":101,"address":"","description":"link button not pressed"}}]"#.utf8))
+        #expect(wait.first?.error?.type == 101)
+    }
+
+    @Test func validatesIPAddresses() {
+        #expect(Pairing.isValidIP("192.168.1.23"))
+        #expect(!Pairing.isValidIP("192.168.1"))
+        #expect(!Pairing.isValidIP("192.168.1.256"))
+        #expect(!Pairing.isValidIP("192.168.01.2"))
+        #expect(!Pairing.isValidIP("hue.local"))
+    }
+
+    @Test func certificatePinning() {
+        let a = Data([1, 2, 3]), b = Data([4, 5, 6])
+        #expect(BridgeTrust.decide(pinned: nil, presented: a) == .accept)   // pairing
+        #expect(BridgeTrust.decide(pinned: a, presented: a) == .accept)
+        #expect(BridgeTrust.decide(pinned: a, presented: b) == .reject)
+    }
+}

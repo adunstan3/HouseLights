@@ -1,21 +1,39 @@
 import SwiftUI
 
-/// The app's first screen. For now a placeholder; milestone 2 adds first-launch
-/// routing (Bridge screen when no key is saved) and milestone 3 the Rooms grid.
+/// Milestone 1 stand-in: shows what the bridge layer loaded, with a link to the log.
+/// Milestone 2 replaces this with first-launch routing; milestone 3 adds the grid.
 struct RootView: View {
-    var body: some View {
-        VStack(spacing: 8) {
-            Image(systemName: "lightbulb")
-                .font(.system(size: 40, weight: .semibold))
-                .foregroundStyle(Theme.accent)
-            Text("House Lights")
-                .font(.headline.bold())
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(Theme.background)
-    }
-}
+    @Environment(AppModel.self) private var model
 
-#Preview {
-    RootView()
+    var body: some View {
+        NavigationStack {
+            List {
+                Section {
+                    Text(status)
+                        .font(.footnote)
+                }
+                ForEach(model.rooms) { room in
+                    HStack {
+                        Image(systemName: room.iconName)
+                        Text(room.name)
+                        Spacer()
+                        Text(room.isOn ? "\(room.percent)%" : "Off")
+                            .foregroundStyle(.secondary)
+                    }
+                    .font(.footnote)
+                }
+                NavigationLink("Bridge log") { BridgeLogView() }
+            }
+            .navigationTitle("House Lights")
+        }
+    }
+
+    private var status: String {
+        switch model.phase {
+        case .starting, .loading: "Loading…"
+        case .unpaired: "Not paired"
+        case .ready: model.streamConnected ? "Live" : "Loaded"
+        case .unreachable(let why): why
+        }
+    }
 }

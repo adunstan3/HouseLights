@@ -71,13 +71,16 @@
       "build-settings": {
         "ASSETCATALOG_COMPILER_APPICON_NAME": "AppIcon",
         "ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME": "AccentColor",
+        "CODE_SIGN_ENTITLEMENTS": "Config/WatchApp.entitlements",
         "CODE_SIGN_STYLE": "Automatic",
         "CURRENT_PROJECT_VERSION": "1",
         "DEVELOPMENT_TEAM": "265N27R6W3",
         "ENABLE_PREVIEWS": "YES",
         "GENERATE_INFOPLIST_FILE": "YES",
+        "INFOPLIST_FILE": "Config/WatchApp-Info.plist",
         "INFOPLIST_KEY_CFBundleDisplayName": "House Lights",
         "INFOPLIST_KEY_ITSAppUsesNonExemptEncryption": "NO",
+        "INFOPLIST_KEY_NSLocalNetworkUsageDescription": "House Lights talks to your Hue Bridge on your home Wi-Fi to control your lights.",
         "INFOPLIST_KEY_UISupportedInterfaceOrientations": "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown",
         "INFOPLIST_KEY_WKWatchOnly": "YES",
         "LD_RUNPATH_SEARCH_PATHS": [
