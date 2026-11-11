@@ -33,7 +33,7 @@ Every screen fits one watch screen without scrolling. The one exception is the g
 
 | Screen | Reached from | What it holds |
 | --- | --- | --- |
-| Rooms grid (home) | App launch | Title "House Lights", an all-off button, a gear to Settings, and one tile per room and zone |
+| Rooms grid (home) | App launch | All-off button left of the clock, a gear to Settings right of it, the title "Lights" below, and one tile per room and zone |
 | Room | Hold a tile 0.5 s | Back arrow + room name; a top row with the on/off button, brightness % and a brightness bar; a Warmth slider; a Color wheel row; the default-color card |
 | Color wheel | Room › Color wheel | Back arrow, Crown brightness readout, and the largest wheel that fits. Nothing else |
 | Settings | Grid › gear | Arrange rooms, Bridge |
@@ -43,9 +43,9 @@ Every screen fits one watch screen without scrolling. The one exception is the g
 
 **Rooms grid**
 
-- **Size:** shows every room and zone on the bridge, with none hidden. 1–4 tiles = a 2×2 grid of big tiles; 5–9 = 3×3; 10 or more = three across, scrolled by dragging. Never four across.
+- **Size:** shows every room and zone on the bridge, with none hidden. 1–4 tiles = two across (big tiles); 5–9 = three across; 10 or more = three across, scrolled by dragging. Never four across. Tiles are as large as the rows in use allow, so 5–6 rooms fill the screen's width.
 - **Tiles:** square, rounded. A lit tile fills with the room's current color, shows a dark icon and its brightness %. An off tile is dark gray and says Off.
-- **Icons:** chosen from each room's Hue archetype (sofa for living room, chef's hat for kitchen, bed, monitor for office, door for front door, house for zones, and so on), with a bulb as the fallback. No name labels by default.
+- **Icons:** chosen from each room's Hue archetype (sofa for living room, frying pan for kitchen (SF Symbols has no chef's hat), bed, monitor for office, door for front door, house for zones, and so on), with a bulb as the fallback. No name labels by default.
 - **Tap** a tile to toggle that room. **Hold** it 0.5 s to open its Room screen; a hold never also toggles.
 - **All off:** one command to the bridge's all-lights group (`bridge_home`'s `grouped_light`), not one per tile.
 - **Order:** the user's order from Arrange. New rooms from the bridge go to the end.
@@ -57,6 +57,8 @@ Every screen fits one watch screen without scrolling. The one exception is the g
 3. Wait about 150 ms on a new slot before moving the other tiles, then animate them aside.
 4. The dragged tile lifts (slightly larger, white outline) and its order is saved on release.
 
+Once a slot is the target, it stays the target while the finger is anywhere on that slot, so a held tile always makes room after ~150 ms. With more than nine rooms the Arrange tiles shrink so it never scrolls.
+
 Arrange tiles look like the grid's current state: lit rooms in their color, off rooms dark gray. They show icons only.
 
 ## Behavior details
@@ -67,7 +69,7 @@ Arrange tiles look like the grid's current state: lit rooms in their color, off 
 - **Rooms only:** the Crown changes rooms, never zones (a zone's bulbs usually belong to a room too). Zones are still shown and toggled by tap. The pill's count is rooms.
 - **Limits:** each room stops at 100%. A room that reaches 0% turns off.
 - **Back on at 0%:** tapping a room that was dimmed to 0% turns it on at 70%.
-- **Feedback:** a small pill ("Brighter · 4 on" or "Dimmer · 4 on") shows briefly while turning.
+- **Feedback:** a small pill ("Brighter · 4 on" or "Dimmer · 4 on") shows briefly next to the "Lights" title while turning. The Crown's scroll indicator is hidden.
 - **Scrolling:** with 10 or more rooms the Crown still only changes brightness; the grid scrolls by dragging.
 
 **Room screen**
@@ -80,10 +82,14 @@ Arrange tiles look like the grid's current state: lit rooms in their color, off 
 
 - Each room has a default color, stored as a bridge scene named "House Lights – \<room name>". Restoring is one scene recall, and the default survives reinstalling the app.
 - Any warmth or color change that differs from the default is temporary. It stays through any number of off/on cycles (app, widget, Siri) until the user taps **Back to default**.
-- When a room is temporary, the Room screen shows the Temporary color card: the default's swatch and **Back to default** and **Set as default** side by side. Set as default rewrites that room's scene with the current color.
+- When a room is temporary, the Room screen shows the Temporary color card ("Temporary", the default's swatch and label, and **Back to default** and **Set as default** side by side; the button labels shrink to about 11 pt to fit). Set as default rewrites that room's scene with the current color.
 - **Back to default** keeps the room's current brightness. On a room that's off it doesn't turn the lights on; the default comes back the next time the room is turned on.
 - If a bulb comes back from a power cut in Hue's own warm white, the color has changed; the app notices through the event stream and drops the temporary label.
 - The app remembers which rooms are temporary.
+
+**Errors**
+
+- No answer from the bridge (or a changed certificate or rejected key) shows Bridge not reachable. A change the bridge refuses shows a short notice for three seconds. Every request and error is in Settings › Bridge › Log.
 
 **Bridge rate limits**
 
@@ -105,7 +111,7 @@ Both run on the same App Intents, so the toggle and brightness logic is written 
 
 - Rooms and zones are an `AppEntity`, so Siri knows them by their Hue names.
 - Intents: turn a room on, turn it off, set its brightness, set its warmth.
-- App Shortcuts phrases: "Turn off the bedroom in House Lights", "Turn on the living room in House Lights", "Set the living room to 30% in House Lights".
+- App Shortcuts phrases: "Turn off the bedroom in House Lights", "Turn on the living room in House Lights", "Set the living room in House Lights" (Siri then asks for the percentage: a phrase can hold only one parameter, the room). "Set the living room warmth in House Lights" asks for the kelvin.
 - The result shows a small snippet: the room's icon, name and new state (as on the Siri results mockup).
 - If the bridge can't be reached, Siri says so plainly.
 
