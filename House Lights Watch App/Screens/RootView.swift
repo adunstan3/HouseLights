@@ -39,8 +39,8 @@ struct RootView: View {
         case .bridge: BridgeView()
         case .log: BridgeLogView()
         case .arrange: ScreenPlaceholder(title: "Arrange")
-        case .room(let id): ScreenPlaceholder(title: app.room(id)?.name ?? "Room")
-        case .colorWheel: ScreenPlaceholder(title: "Color")
+        case .room(let id): RoomView(roomID: id)
+        case .colorWheel(let id): ColorWheelView(roomID: id)
         }
     }
 
