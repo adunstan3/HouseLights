@@ -19,7 +19,7 @@ logic.
 
 It's a personal project, installed through TestFlight.
 
-**Version 1.0** · watchOS 26 · SwiftUI, App Intents and WidgetKit · no third-party packages
+**Version 1.0 (build 4)** · watchOS 26 · SwiftUI, App Intents and WidgetKit · no third-party packages
 
 ## Contents
 
@@ -36,6 +36,7 @@ It's a personal project, installed through TestFlight.
   - [Smart Stack widget](#smart-stack-widget)
   - [Siri](#siri)
 - [How it talks to the bridge](#how-it-talks-to-the-bridge)
+- [Scenes House Lights keeps on the bridge](#scenes-house-lights-keeps-on-the-bridge)
 - [What's stored on the watch](#whats-stored-on-the-watch)
 - [Building and running](#building-and-running)
 - [Tests](#tests)
@@ -222,6 +223,19 @@ If the bridge can't be reached, Siri says so plainly.
   reconnecting if it drops. For two seconds after the app changes a room, the app's own
   state wins over the stream (the bridge echoes older and in-between states).
 - **Nothing else:** no Hue account, cloud, analytics or location.
+
+## Scenes House Lights keeps on the bridge
+
+Each room can have up to three scenes from House Lights (they show in the Hue app's scene list):
+
+| Scene | What it's for | Created when |
+| --- | --- | --- |
+| **House Lights – \<room\>** | The room's default (Back to default, Set as default) | The first time you change the room's color or warmth, or tap Set as default |
+| **House Lights Now – \<room\>** | What a dimmer switch's On button recalls; rewritten with every change the watch makes | When you pick the room in Settings › Remote scenes |
+| **House Lights Mix – \<room\>** | The app's working scene for showing a hybrid | The first time you pick a hybrid in that room |
+
+Point remotes at the "Now" scenes, never the "Mix" ones; a hybrid is copied into the room's
+"Now" scene too, so the remote brings it back. Scenes you made yourself are never touched.
 
 ## What's stored on the watch
 
