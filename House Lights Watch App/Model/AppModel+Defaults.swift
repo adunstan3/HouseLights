@@ -49,6 +49,8 @@ extension AppModel {
         guard let room = room(roomID), let scene = home.defaults[roomID] else { return }
         temporaryRooms[roomID] = nil
         defaultsError = nil
+        // The remote follows: its scene goes back to the default too.
+        remoteSceneChanged(roomID, color: scene.color)
         if room.isOn {
             recall(scene, in: room, brightness: room.brightness)
         } else {

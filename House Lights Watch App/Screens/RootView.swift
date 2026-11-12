@@ -58,6 +58,7 @@ struct RootView: View {
         case .arrange: ArrangeView()
         case .room(let id): RoomView(roomID: id)
         case .colorWheel(let id): ColorWheelView(roomID: id)
+        case .remoteScenes: RemoteScenesView()
         }
     }
 
@@ -72,6 +73,7 @@ struct RootView: View {
         case "bridge": router.path = [.settings, .bridge]
         case "log": router.path = [.settings, .bridge, .log]
         case "arrange": router.path = [.settings, .arrange]
+        case "remotes": router.path = [.settings, .remoteScenes]
         case "room": router.path = [.room(roomID)]
         case "wheel": router.path = [.room(roomID), .colorWheel(roomID)]
         default: break

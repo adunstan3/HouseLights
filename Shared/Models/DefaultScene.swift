@@ -18,7 +18,22 @@ nonisolated struct DefaultScene: Sendable, Hashable, Identifiable {
         return head + room
     }
 
-    static func isDefaultScene(_ name: String) -> Bool { name.hasPrefix(prefix) }
+    /// A room's default: "House Lights – <room>" (not a "House Lights Now" remote scene).
+    static func isDefaultScene(_ name: String) -> Bool { name.hasPrefix(prefix) && !isRemoteScene(name) }
+
+    // MARK: Remote scenes
+
+    /// The scene a room's Hue dimmer switch turns the room on with: "House Lights Now – <room>".
+    /// The watch rewrites it after every change it makes, so the remote brings back what the
+    /// watch last set. The real default stays in the "House Lights – <room>" scene.
+    static let remotePrefix = "House Lights Now"
+
+    static func remoteName(for roomName: String) -> String {
+        let head = "\(remotePrefix) – "
+        return head + String(roomName.prefix(maxNameLength - head.count))
+    }
+
+    static func isRemoteScene(_ name: String) -> Bool { name.hasPrefix(remotePrefix) }
 
     /// The color most of the scene's lights are set to.
     var color: LightColor? {
@@ -30,10 +45,12 @@ nonisolated struct DefaultScene: Sendable, Hashable, Identifiable {
         return colors.mostCommon
     }
 
-    /// Scene actions that put every light in the room in `color` at its current brightness.
-    static func actions(for lights: [LightState], color: LightColor?) -> [HueSceneAction] {
+    /// Scene actions that put every light in the room in `color`, at `brightness` (or each
+    /// light's current brightness).
+    static func actions(for lights: [LightState], color: LightColor?, brightness: Double? = nil) -> [HueSceneAction] {
         lights.map { light in
-            var body = HueSceneActionBody(on: HueOn(on: true), dimming: HueDimming(brightness: max(light.brightness, 1)))
+            let level = min(max(brightness ?? light.brightness, 1), 100)
+            var body = HueSceneActionBody(on: HueOn(on: true), dimming: HueDimming(brightness: level))
             switch color ?? light.color {
             case .temperature(let m)?:
                 let clamped = light.mirekRange.map { min(max(m, $0.lowerBound), $0.upperBound) } ?? m

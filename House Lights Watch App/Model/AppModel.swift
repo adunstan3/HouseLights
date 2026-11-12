@@ -57,6 +57,7 @@ final class AppModel {
         temporaryRooms = store.temporaryRooms
         pendingDefaults = store.pendingDefaults
         savedSwatches = store.savedSwatches
+        remoteRooms = store.remoteRooms
         savedArrangement = store.gridArrangement
     }
 
@@ -67,6 +68,11 @@ final class AppModel {
     var temporaryRooms: [String: LightColor] = [:] { didSet { store.temporaryRooms = temporaryRooms } }
     /// Rooms whose Back to default was tapped while off.
     var pendingDefaults: Set<String> = [] { didSet { store.pendingDefaults = pendingDefaults } }
+    /// Rooms whose "House Lights Now" remote scene the watch keeps up to date.
+    var remoteRooms: Set<String> = [] { didSet { store.remoteRooms = remoteRooms } }
+    @ObservationIgnored var remoteSceneTasks: [String: Task<Void, Never>] = [:]
+    /// How long a room must be left alone before its remote scene is saved.
+    @ObservationIgnored var remoteSceneDelay: Duration = .seconds(1.5)
     /// Colors pinned on the Color wheel screen (newest first), shared by every room.
     var savedSwatches: [SavedSwatch] = [] { didSet { store.savedSwatches = savedSwatches } }
 

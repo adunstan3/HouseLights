@@ -8,6 +8,7 @@ enum Route: Hashable {
     case arrange
     case room(String)
     case colorWheel(String)
+    case remoteScenes
 }
 
 /// One navigation path for the whole app, so taps, debug launch arguments and the

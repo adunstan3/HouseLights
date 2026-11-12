@@ -35,6 +35,19 @@ request, response code and error is there (newest first).
 | Siri | "Turn off the bedroom in House Lights"; "Set the living room in House Lights" (Siri asks for the %). | `Intent: …` |
 | Off Wi-Fi | Walk out of range: Bridge not reachable appears instead of hanging. | `timed out` |
 
+## Setting up the dimmer switches (remote scenes)
+
+1. **On the watch:** Settings › Remote scenes, tap each room that has a dimmer (the tile lights
+   up with a check). The watch creates "House Lights Now – <room>" from the room's current look,
+   so first set each room to the look you want (your "Day" colors, for example).
+2. **In the Hue app**, for each dimmer: Settings › Accessories (or the dimmer under the room's
+   devices) › the dimmer › the On button. Replace "Day" with **House Lights Now – <room>**
+   (if it offers a scene cycle, make it the only scene). Do this once per remote.
+3. **Check:** on the watch, change a room's color, wait two seconds, turn it off at the remote,
+   then on again: it should come back in the new color. The log shows `PUT /clip/v2/resource/scene/…`
+   for each save.
+4. "Day" isn't deleted or changed; you can switch a remote back to it any time.
+
 ## Hue API details I couldn't confirm without a bridge
 
 - **Color through `grouped_light`.** Forum reports disagree on whether a room's grouped_light
@@ -43,6 +56,8 @@ request, response code and error is there (newest first).
   send color per light (within the rate limit).
 - **Scene recall with brightness.** Back to default sends `recall: { action: "active",
   dimming: { brightness } }` to keep the room's brightness. Confirm the brightness stays put.
+- **Remote scenes:** that a dimmer's On button picks up a scene's new contents after the watch
+  rewrites it (it should: the button recalls the scene by id).
 - **Scene names** are kept within 32 characters (the limit a third-party Hue connector
   documents). Long room names are shortened in the scene name.
 - **Event stream on watchOS.** watchOS may close long-lived connections when the wrist drops;

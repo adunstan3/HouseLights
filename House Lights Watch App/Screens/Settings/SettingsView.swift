@@ -10,6 +10,9 @@ struct SettingsView: View {
                 SettingsRow(icon: "square.grid.2x2", title: "Arrange rooms", subtitle: "Order of the grid") {
                     router.push(.arrange)
                 }
+                SettingsRow(icon: "dial.low", title: "Remote scenes", subtitle: "For dimmer switches") {
+                    router.push(.remoteScenes)
+                }
                 SettingsRow(icon: "dot.square", title: "Bridge", subtitle: "IP address and pairing") {
                     router.push(.bridge)
                 }

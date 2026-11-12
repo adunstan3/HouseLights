@@ -44,6 +44,7 @@ extension AppModel {
             store.zeroDimmed.remove(roomID)
             update(roomID) { $0.isOn = true; $0.brightness = v }
             enqueue(GroupedLightCommand(on: room.isOn ? nil : true, brightness: v), for: room)
+            remoteSceneChanged(roomID)
         }
     }
 
@@ -56,6 +57,7 @@ extension AppModel {
             case .brightness(let b):
                 update(id) { $0.brightness = b }
                 enqueue(GroupedLightCommand(brightness: b), for: room)
+                remoteSceneChanged(id)
             case .off:
                 store.zeroDimmed.insert(id)
                 update(id) { $0.isOn = false; $0.brightness = 0 }

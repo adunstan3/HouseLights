@@ -28,6 +28,7 @@ It's a personal project, installed through TestFlight.
   - [Room screen](#room-screen)
   - [Color wheel](#color-wheel)
   - [Defaults and temporary colors](#defaults-and-temporary-colors)
+  - [Remote scenes](#remote-scenes)
   - [Arrange](#arrange)
   - [Pairing with the bridge](#pairing-with-the-bridge)
   - [Bridge not reachable](#bridge-not-reachable)
@@ -108,6 +109,18 @@ buttons: **Back to default** (filled with the default color) and **Set as defaul
 (filled with the current color). Back to default keeps the room's brightness; on a room
 that's off, the default comes back the next time House Lights turns it on. A color changed
 outside the app (the Hue app, a switch, a power cut) drops the temporary label.
+
+### Remote scenes
+
+<p>
+  <img src="docs/screenshots/remote-scenes.png" width="180" alt="Remote scenes: choose rooms with a dimmer switch">
+</p>
+
+For rooms with a Hue dimmer switch: Settings › Remote scenes, tap the rooms. Each gets a
+scene **"House Lights Now – \<room\>"** that the watch rewrites (about 1.5 seconds after you
+stop adjusting) with every color, warmth or brightness change it makes. Set the dimmer's On
+button to that scene in the Hue app and the remote turns the room on in whatever the watch
+last chose. Turning a room off never changes the scene, and Back to default resets it.
 
 ### Arrange
 
@@ -223,7 +236,7 @@ Debug launch arguments (simulator / debug builds):
 `-mockTiles 12`, `-unpaired YES`, `-mockOffline YES`, `-mockTemporary YES`,
 `-mockOutsideChanges YES`, `-mockSwatches YES`, `-scrollSwatches YES`, `-mockFreeLayout YES`,
 `-realBridge YES`, `-openScreen settings|bridge|log|arrange|room|wheel`,
-`-openRoom "Office"`.
+`-openRoom "Office"` (`-openScreen remotes` opens Remote scenes).
 
 ### Releasing through TestFlight
 
@@ -233,7 +246,7 @@ using the Apple ID signed in to Xcode.
 
 ## Tests
 
-- **112 unit tests** (Swift Testing, about 3 seconds): color maths and gamut clamping,
+- **121 unit tests** (Swift Testing, about 3 seconds): color maths and gamut clamping,
   command merging and the once-a-second sender, the event-stream parser, building the home
   from bridge-shaped JSON, pairing and certificate pinning, grid sizes, the Crown rules,
   the four Arrange drag rules, defaults and temporary colors, live sending while dragging,

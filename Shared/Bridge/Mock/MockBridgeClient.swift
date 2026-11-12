@@ -71,19 +71,25 @@ actor MockBridgeClient: BridgeClient {
     func createScene(name: String, roomID: String, actions: [HueSceneAction]) async throws -> String {
         try await respond("POST /clip/v2/resource/scene — \(name)")
         let id = "mock-scene-\(UUID().uuidString.prefix(8))"
-        home.defaults[roomID] = DefaultScene(id: id, roomID: roomID, name: name, actions: actions)
+        let scene = DefaultScene(id: id, roomID: roomID, name: name, actions: actions)
+        if DefaultScene.isRemoteScene(name) { home.remoteScenes[roomID] = scene } else { home.defaults[roomID] = scene }
         return id
     }
 
     func updateScene(id: String, actions: [HueSceneAction]) async throws {
         try await respond("PUT /clip/v2/resource/scene/\(id)")
+        if let roomID = home.remoteScenes.first(where: { $0.value.id == id })?.key {
+            home.remoteScenes[roomID]?.actions = actions
+            return
+        }
         guard let roomID = home.defaults.first(where: { $0.value.id == id })?.key else { throw BridgeError.http(404, "no scene") }
         home.defaults[roomID]?.actions = actions
     }
 
     func recallScene(id: String, brightness: Double?) async throws {
         try await respond("PUT /clip/v2/resource/scene/\(id) — recall")
-        guard let scene = home.defaults.values.first(where: { $0.id == id }) else { throw BridgeError.http(404, "no scene") }
+        guard let scene = (Array(home.defaults.values) + Array(home.remoteScenes.values)).first(where: { $0.id == id })
+        else { throw BridgeError.http(404, "no scene") }
         var items: [HueEventItem] = []
         for action in scene.actions {
             guard var light = home.lights[action.target.rid] else { continue }
@@ -121,6 +127,12 @@ actor MockBridgeClient: BridgeClient {
         items += refreshGroups()
         log(.info, "Mock: outside change to \(room.name)")
         emit(items)
+    }
+
+    /// Presses a dimmer switch's On button set to the room's remote scene.
+    func simulateRemotePress(roomID: String) async throws {
+        guard let scene = home.remoteScenes[roomID] else { throw BridgeError.http(404, "no remote scene") }
+        try await recallScene(id: scene.id, brightness: nil)
     }
 
     /// Sets a room's color as the Hue app (or a power cut) would.

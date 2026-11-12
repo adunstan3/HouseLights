@@ -27,5 +27,6 @@ extension AppModel {
         }
         enqueue(command, for: room)
         noteColorChange(room.id, color: color, wasDefault: wasDefault)
+        remoteSceneChanged(room.id)
     }
 }

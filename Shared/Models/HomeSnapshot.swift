@@ -8,6 +8,8 @@ nonisolated struct HomeSnapshot: Sendable, Equatable {
     var lights: [String: LightState] = [:]
     /// Default scene per room id.
     var defaults: [String: DefaultScene] = [:]
+    /// "House Lights Now" scene per room (what its remote turns it on with).
+    var remoteScenes: [String: DefaultScene] = [:]
     /// The `bridge_home` grouped light, which switches every light at once.
     var allLightsGroupID: String?
 
@@ -48,8 +50,11 @@ nonisolated struct HomeSnapshot: Sendable, Equatable {
         rooms = roomDTOs.compactMap { make($0, kind: .room) } + zones.compactMap { make($0, kind: .zone) }
 
         let roomIDs = Set(rooms.map(\.id))
-        for s in scenes where roomIDs.contains(s.group.rid) && DefaultScene.isDefaultScene(s.metadata.name ?? "") {
-            defaults[s.group.rid] = DefaultScene(id: s.id, roomID: s.group.rid, name: s.metadata.name ?? "", actions: s.actions)
+        for s in scenes where roomIDs.contains(s.group.rid) {
+            let name = s.metadata.name ?? ""
+            let scene = DefaultScene(id: s.id, roomID: s.group.rid, name: name, actions: s.actions)
+            if DefaultScene.isRemoteScene(name) { remoteScenes[s.group.rid] = scene }
+            else if DefaultScene.isDefaultScene(name) { defaults[s.group.rid] = scene }
         }
     }
 

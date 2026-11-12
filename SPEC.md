@@ -36,7 +36,7 @@ Every screen fits one watch screen without scrolling. The one exception is the g
 | Rooms grid (home) | App launch | All-off button left of the clock, a gear to Settings right of it, the title "Lights" centered under the time, and one tile per room |
 | Room | Hold a tile 0.5 s | Back arrow + room name; a top row with the on/off button, brightness % and a brightness bar; a Warmth slider; a Color wheel row; the default-color card |
 | Color wheel | Room › Color wheel | Back button and a pin button either side of the clock, the largest wheel that fits, and saved colors below it. Brightness is set on the Room screen; the Crown scrolls here |
-| Settings | Grid › gear | Arrange rooms, Bridge. Back from Settings, Arrange or Bridge goes straight to the grid |
+| Settings | Grid › gear | Arrange rooms, Remote scenes, Bridge. Back from Settings, Arrange or Bridge goes straight to the grid |
 | Arrange | Settings › Arrange rooms | The same icon grid with every empty spot outlined; drag a room to any spot, and nothing here changes lights |
 | Bridge (pair) | First launch, or Settings › Bridge | IP field, the press-the-button instruction, Pair; then Paired and Show rooms |
 | Bridge not reachable | Any time the bridge doesn't answer | Message, Try again, Bridge settings |
@@ -96,6 +96,15 @@ Arrange tiles look like the grid's current state: lit rooms in their color, off 
 **Errors**
 
 - No answer from the bridge (or a changed certificate or rejected key) shows Bridge not reachable. A change the bridge refuses shows a short notice for three seconds. Every request and error is in Settings › Bridge › Log.
+
+**Remote scenes (Hue dimmer switches)**
+
+- Settings › Remote scenes shows the rooms as tiles; tap the rooms that have a dimmer switch. Each gets a bridge scene **"House Lights Now – \<room\>"**, created from the room's current look.
+- After every color, warmth or brightness change the watch makes in that room, the scene is rewritten with the new look, about 1.5 s after the room is left alone (one request; the lights themselves change first, as always). Back to default copies the default into it.
+- Turning a room off (tap, All off, dimming to 0%) never changes the scene: it always means "on", at 1% or more.
+- In the Hue app, set each dimmer's On button to its room's "House Lights Now" scene; the remote then turns the room on in whatever the watch last set. The real default stays in "House Lights – \<room\>".
+- Changes made with the Hue app or the remote's dim buttons don't update the scene.
+- Turning a room's tile off on this screen stops updating its scene but leaves the scene on the bridge (a remote may still use it).
 
 **Bridge rate limits**
 

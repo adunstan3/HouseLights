@@ -8,7 +8,7 @@ nonisolated struct SharedStore: @unchecked Sendable {
     init(defaults: UserDefaults = AppGroup.defaults) { self.defaults = defaults }
 
     private enum Key: String {
-        case bridgeIP, gridOrder, temporaryRooms, pendingDefaults, zeroDimmed, lastKnownRooms, gridArrangement
+        case bridgeIP, gridOrder, temporaryRooms, pendingDefaults, zeroDimmed, lastKnownRooms, gridArrangement, remoteRooms
     }
 
     var bridgeIP: String? {
@@ -26,6 +26,12 @@ nonisolated struct SharedStore: @unchecked Sendable {
     var gridArrangement: GridArrangement? {
         get { decode(Key.gridArrangement) }
         nonmutating set { encode(newValue, Key.gridArrangement) }
+    }
+
+    /// Rooms whose "House Lights Now" remote scene the watch keeps up to date.
+    var remoteRooms: Set<String> {
+        get { Set(defaults.stringArray(forKey: Key.remoteRooms.rawValue) ?? []) }
+        nonmutating set { defaults.set(Array(newValue).sorted(), forKey: Key.remoteRooms.rawValue) }
     }
 
     /// Rooms showing a temporary color, with the color the app set.
