@@ -33,10 +33,15 @@ nonisolated struct HomeSnapshot: Sendable, Equatable {
             let directLights = dto.children.filter { $0.rtype == "light" }.map(\.rid)
             let viaDevices = lightDTOs.filter { deviceIDs.contains($0.owner.rid) }.map(\.id)
             let group = groups[gid]
+            let ids = directLights + viaDevices
+            let isOn = group?.on?.on ?? false
+            // While a room is off its grouped_light can report brightness 0; keep the level its
+            // bulbs will come back at (their own last brightness) instead.
+            let lastLevel = ids.compactMap { lights[$0]?.brightness }.max()
             var room = Room(id: dto.id, kind: kind, name: dto.metadata.name ?? "Room",
                             archetype: dto.metadata.archetype ?? "other", groupedLightID: gid,
-                            lightIDs: directLights + viaDevices, isOn: group?.on?.on ?? false,
-                            brightness: group?.dimming?.brightness ?? 0)
+                            lightIDs: ids, isOn: isOn,
+                            brightness: isOn ? (group?.dimming?.brightness ?? lastLevel ?? 0) : (lastLevel ?? group?.dimming?.brightness ?? 0))
             HomeSnapshot.derive(&room, from: room.lightIDs.compactMap { lights[$0] })
             return room
         }
@@ -70,7 +75,8 @@ nonisolated struct HomeSnapshot: Sendable, Equatable {
         case "grouped_light":
             guard let i = rooms.firstIndex(where: { $0.groupedLightID == item.id }) else { return [] }
             if let on = item.on { rooms[i].isOn = on.on }
-            if let d = item.dimming { rooms[i].brightness = d.brightness }
+            // An off room keeps its last brightness (the group may report 0 while off).
+            if let d = item.dimming, rooms[i].isOn { rooms[i].brightness = d.brightness }
             return [rooms[i].id]
         case "light":
             guard var light = lights[item.id] else { return [] }

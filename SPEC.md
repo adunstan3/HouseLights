@@ -72,7 +72,7 @@ Arrange tiles look like the grid's current state: lit rooms in their color, off 
 - **Rooms that are on:** one Crown step adds the same amount (5 points) to every room that's on, so differences are kept (70% and 40% become 75% and 45%). Rooms that are off are untouched.
 - **Rooms only:** the Crown changes rooms, never zones.
 - **Limits:** each room stops at 100%. A room that reaches 0% turns off.
-- **Back on at 0%:** tapping a room that was dimmed to 0% turns it on at 70%.
+- **Back on at 0%:** tapping a room that was dimmed to 0% (Crown or slider) turns it on at 70%. A room switched off any other way (tap, all off, a remote) comes back at its own last brightness, and an off room keeps showing that level even though the bridge reports 0 for it.
 - **Feedback:** a small pill ("Brighter · 4 on" or "Dimmer · 4 on") shows briefly over the top of the grid while turning. The Crown's scroll indicator is hidden.
 - **Scrolling:** with 10 or more rooms the Crown still only changes brightness; the grid scrolls by dragging.
 

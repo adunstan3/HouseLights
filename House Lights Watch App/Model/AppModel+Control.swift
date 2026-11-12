@@ -19,8 +19,10 @@ extension AppModel {
             return
         }
         if turnOnWithDefault(roomID) { return }   // Back to default while off (milestone 5)
-        if store.zeroDimmed.contains(roomID) || room.brightness < 1 {
-            // The Crown dimmed it to 0%, so the bridge would bring it back at the bottom; use 70%.
+        if store.zeroDimmed.contains(roomID) {
+            // Only a room the Crown or slider dimmed to 0% comes back at 70% (the bulbs would
+            // otherwise return at the very bottom). A room switched off with a tap comes back
+            // at its own last brightness.
             store.zeroDimmed.remove(roomID)
             update(roomID) { $0.isOn = true; $0.brightness = CrownBrightness.backOnLevel }
             enqueue(GroupedLightCommand(on: true, brightness: CrownBrightness.backOnLevel), for: room)

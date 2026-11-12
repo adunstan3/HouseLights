@@ -38,7 +38,8 @@ extension BridgeClient {
     func fetchStates() async throws -> LiveStates {
         let home = try await fetchHome()
         var groups: [String: LiveStates.Group] = [:]
-        for room in home.rooms { groups[room.groupedLightID] = .init(on: room.isOn, brightness: room.brightness) }
+        // Like the bridge, an off group reports brightness 0.
+        for room in home.rooms { groups[room.groupedLightID] = .init(on: room.isOn, brightness: room.isOn ? room.brightness : 0) }
         return LiveStates(groups: groups, lights: home.lights)
     }
 }

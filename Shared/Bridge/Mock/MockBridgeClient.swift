@@ -183,7 +183,8 @@ actor MockBridgeClient: BridgeClient {
             if !lit.isEmpty { home.rooms[i].brightness = lit.map(\.brightness).reduce(0, +) / Double(lit.count) }
             HomeSnapshot.derive(&home.rooms[i], from: lights)
             items.append(HueEventItem(id: home.rooms[i].groupedLightID, type: "grouped_light",
-                                      on: HueOn(on: home.rooms[i].isOn), dimming: HueDimming(brightness: home.rooms[i].brightness)))
+                                      on: HueOn(on: home.rooms[i].isOn),
+                                      dimming: HueDimming(brightness: home.rooms[i].isOn ? home.rooms[i].brightness : 0)))
         }
         return items
     }

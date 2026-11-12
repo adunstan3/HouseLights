@@ -268,7 +268,7 @@ final class AppModel {
             var room = home.rooms[i]
             if let g = states.groups[room.groupedLightID] {
                 room.isOn = g.on
-                if let b = g.brightness { room.brightness = b }
+                if g.on, let b = g.brightness { room.brightness = b }   // off: keep the last level
             }
             if changed.contains(room.id) { HomeSnapshot.derive(&room, from: home.lights(in: room)) }
             if room != home.rooms[i] {

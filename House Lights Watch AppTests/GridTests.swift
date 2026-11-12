@@ -222,3 +222,47 @@ struct OutsideChangeSyncTests {
         #expect(app.room("mock-room-0")?.isOn == false)
     }
 }
+
+/// The 70% rule is only for rooms dimmed to 0% (reported bug: a room switched off with a tap
+/// came back at 70% after another room was turned up).
+@MainActor
+struct BackOnLevelTests {
+    @Test func theReportedSequence() async throws {
+        let (app, mock) = ConnectionTests.makeApp(paired: true)
+        await app.start()
+        app.isActive = true
+        app.startEventStream()
+        #expect(await eventually { await mock.streamCount > 0 })
+        app.toggle("mock-room-3")                                     // Office (85%) off with a tap
+        for _ in 0..<10 { app.crownStep(1) }                          // the others up to 100
+        try await Task.sleep(for: .milliseconds(300))                 // the bridge reports Office at 0 while off
+        app.lastLocalChange["mock-room-3"] = .distantPast
+        app.apply(LiveStates(groups: ["mock-group-3": .init(on: false, brightness: 0)], lights: [:]))
+        #expect(app.room("mock-room-3")?.percent == 85)               // its level is kept
+        try await Task.sleep(for: .milliseconds(1100))
+        app.toggle("mock-room-3")                                     // back on
+        #expect(app.room("mock-room-3")?.percent == 85)
+        #expect(await eventually { await mock.currentHome.room("mock-room-3")?.isOn == true })
+        #expect(await mock.currentHome.lights["mock-light-3-a"]?.brightness == 85)   // not 70
+        app.stopEventStream()
+    }
+
+    @Test func aRoomReadWhileOffShowsItsBulbsLastLevel() throws {
+        let off = HomeSnapshotTests.rooms, groups = """
+        {"errors":[],"data":[{"id":"gl-1","type":"grouped_light","owner":{"rid":"room-1","rtype":"room"},"on":{"on":false},"dimming":{"brightness":0}}]}
+        """
+        func d<T: Decodable & Sendable>(_ s: String, _: T.Type) throws -> [T] {
+            try JSONDecoder().decode(HueResponse<T>.self, from: Data(s.utf8)).data
+        }
+        let home = try HomeSnapshot(rooms: d(off, HueGroupDTO.self), zones: [], groupedLights: d(groups, HueGroupedLightDTO.self),
+                                    lights: d(HomeSnapshotTests.lights, HueLightDTO.self), scenes: [])
+        #expect(home.room("room-1")?.isOn == false)
+        #expect(home.room("room-1")?.percent == 70)                   // the bulbs' last level, not 0
+    }
+
+    @Test func turnOnPlanUsesSeventyOnlyAfterDimmingToZero() {
+        let room = Room(id: "r", kind: .room, name: "R", archetype: "other", groupedLightID: "g", lightIDs: [], isOn: false, brightness: 0)
+        #expect(TurnOnPlan.make(room: room, pendingDefault: false, zeroDimmed: false, defaultSceneID: nil) == .on)
+        #expect(TurnOnPlan.make(room: room, pendingDefault: false, zeroDimmed: true, defaultSceneID: nil) == .onAt(70))
+    }
+}
