@@ -1,10 +1,10 @@
 import SwiftUI
 import WatchKit
 
-/// The Color wheel screen: the largest wheel that fits, the Crown brightness readout, and a
-/// pin button (right of the clock) that saves the current color. Saved colors sit below the
-/// wheel, four across; drag the page to scroll to them. Tap a swatch to use it, hold it to
-/// remove it. The color is sent when the finger lifts, not on every movement.
+/// The Color wheel screen: the largest wheel that fits and a pin button (right of the clock)
+/// that saves the current color. Saved colors sit below the wheel, four across; turn the
+/// Crown or drag the page to scroll to them. Tap a swatch to use it, hold it to remove it.
+/// Brightness is set on the Room screen. The color is sent when the finger lifts.
 struct ColorWheelView: View {
     let roomID: String
     @Environment(AppModel.self) private var app
@@ -19,7 +19,6 @@ struct ColorWheelView: View {
                         let d = min(geo.size.width, geo.size.height) - 4
                         wheel(diameter: d)
                             .frame(width: geo.size.width, height: d)
-                            .overlay(alignment: .topLeading) { brightnessReadout }
                         SwatchGrid(swatches: app.savedSwatches, selected: current, highlighted: justPinned,
                                    onTap: use, onRemove: remove)
                             .id("swatches")
@@ -45,28 +44,11 @@ struct ColorWheelView: View {
                 .accessibilityIdentifier("pinColor")
             }
         }
-        .brightnessCrown(roomID: roomID)
     }
 
     /// The knob's color: where the finger last left it, or the room's current color.
     private var current: (hue: Double, saturation: Double) {
         knob ?? app.room(roomID).map { WheelMath.hueSaturation(of: $0.displayColor) } ?? (0, 0)
-    }
-
-    /// Sits in the empty corner beside the round wheel: the Crown icon above the percentage,
-    /// stacked so the text stays clear of the wheel's edge.
-    private var brightnessReadout: some View {
-        VStack(spacing: 1) {
-            Image(systemName: "digitalcrown.horizontal.arrow.clockwise")
-                .font(.system(size: 13, weight: .semibold))
-                .accessibilityHidden(true)
-            Text(app.room(roomID).map { $0.isOn ? "\($0.percent)%" : "Off" } ?? "")
-                .font(.footnote.weight(.semibold))
-                .monospacedDigit()
-                .accessibilityIdentifier("wheelBrightness")
-        }
-        .foregroundStyle(Theme.secondaryText)
-        .allowsHitTesting(false)
     }
 
     private func wheel(diameter d: CGFloat) -> some View {

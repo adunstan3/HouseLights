@@ -90,12 +90,12 @@ that's off doesn't turn it on; the new color shows when it's next switched on.
   <img src="docs/screenshots/swatches.png" width="180" alt="Saved colors below the wheel">
 </p>
 
-The largest wheel that fits, with the Crown icon and brightness stacked in the corner (the
-Crown still sets brightness here). The color is sent when your finger lifts, converted to Hue's CIE xy
+The largest wheel that fits; brightness is set on the Room screen, so here the Crown
+scrolls. The color is sent when your finger lifts, converted to Hue's CIE xy
 coordinates and fitted to the colors the room's bulbs can show.
 
 The **pin** button right of the clock saves the current color. Saved colors appear below
-the wheel, four across; drag the page to scroll to them. Tap a swatch to use it in this
+the wheel, four across; turn the Crown or drag the page to scroll to them. Tap a swatch to use it in this
 room, hold it to remove it. They're shared by every room.
 
 ### Defaults and temporary colors
@@ -240,7 +240,7 @@ using the Apple ID signed in to Xcode.
   the settle window and reloads racing a tap, saved colors, Siri actions and the widget's
   rooms. Widget and Siri snapshots render
   to PNGs with `TEST_RUNNER_SNAPSHOT_DIR=… scripts/test.sh`.
-- **10 UI tests** (XCTest, about 2 minutes): tap toggles, hold opens without toggling, the
+- **11 UI tests** (XCTest, about 2 minutes): tap toggles, hold opens without toggling, the
   Crown on every screen (and never scrolling the big grid), a real Arrange drag, the
   temporary buttons appearing at once, pinning, scrolling to and removing a saved color, and
   Back going straight to the grid.

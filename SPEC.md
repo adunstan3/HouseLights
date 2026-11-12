@@ -35,7 +35,7 @@ Every screen fits one watch screen without scrolling. The one exception is the g
 | --- | --- | --- |
 | Rooms grid (home) | App launch | All-off button left of the clock, a gear to Settings right of it, the title "Lights" centered under the time, and one tile per room |
 | Room | Hold a tile 0.5 s | Back arrow + room name; a top row with the on/off button, brightness % and a brightness bar; a Warmth slider; a Color wheel row; the default-color card |
-| Color wheel | Room › Color wheel | Back button and a pin button either side of the clock, the Crown brightness readout, the largest wheel that fits, and saved colors below it |
+| Color wheel | Room › Color wheel | Back button and a pin button either side of the clock, the largest wheel that fits, and saved colors below it. Brightness is set on the Room screen; the Crown scrolls here |
 | Settings | Grid › gear | Arrange rooms, Bridge. Back from Settings, Arrange or Bridge goes straight to the grid |
 | Arrange | Settings › Arrange rooms | The same icon grid with every empty spot outlined; drag a room to any spot, and nothing here changes lights |
 | Bridge (pair) | First launch, or Settings › Bridge | IP field, the press-the-button instruction, Pair; then Paired and Show rooms |
@@ -81,7 +81,7 @@ Arrange tiles look like the grid's current state: lit rooms in their color, off 
 - The Crown sets that room's brightness in 5% steps (snapping to multiples of 5), with no scroll indicator; the brightness bar is also a slider you can drag. Its on/off button toggles the room.
 - Changing warmth or color of a room that's off doesn't turn it on: the change is sent without "on" (current Hue bulbs apply it when next switched on), and the tile stays off.
 - **Warmth** sets color temperature (2200–6500 K). **Color wheel** sets color. Whichever was touched last is what the lights show.
-- **Saved colors:** the pin button saves the wheel's current color. Saved colors sit below the wheel as swatches, four across, newest first; drag the page to scroll to them (dragging on the wheel picks a color, and the Crown still only sets brightness). Tap a swatch to use it; hold one to remove it. They're shared by every room and kept on the watch; near-duplicates aren't saved twice.
+- **Saved colors:** the pin button saves the wheel's current color. Saved colors sit below the wheel as swatches, four across, newest first; turn the Crown or drag the page to scroll to them (dragging on the wheel picks a color). Tap a swatch to use it; hold one to remove it. They're shared by every room and kept on the watch; near-duplicates aren't saved twice.
 - The color wheel sends a color when the finger lifts, not on every movement. Convert the wheel's color to Hue's CIE xy coordinates and clamp it to the room's color gamut (the gamut most of its color bulbs share, usually Hue's gamut C), so the swatch matches what the bulbs show. It's sent once through the room's `grouped_light`; the bridge fits it to any bulb with a narrower gamut.
 
 **Temporary colors and defaults**

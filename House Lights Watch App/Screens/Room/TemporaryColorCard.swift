@@ -23,6 +23,7 @@ struct TemporaryColorCard: View {
                     Text(error).font(.footnote).foregroundStyle(.red).lineLimit(1).offset(y: 18)
                 }
             }
+            .padding(.horizontal, 6)   // clear of the screen's rounded bottom corners
             .accessibilityElement(children: .contain)
             .accessibilityIdentifier("temporaryCard")
         }
@@ -36,14 +37,14 @@ struct ColorButtonStyle: ButtonStyle {
 
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .font(.system(size: 15, weight: .semibold))
+            .font(.system(size: 14, weight: .semibold))
             .multilineTextAlignment(.center)
             .lineLimit(2)
             .minimumScaleFactor(0.85)
             .foregroundStyle(color?.labelColor ?? Theme.onAccent)
-            .padding(.horizontal, 10)
-            .padding(.vertical, 6)
-            .frame(maxWidth: .infinity, minHeight: 54)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 3)
+            .frame(maxWidth: .infinity, minHeight: 44)
             .background(
                 RoundedRectangle(cornerRadius: 16, style: .continuous)
                     .fill(color?.tileColor ?? Theme.accent)

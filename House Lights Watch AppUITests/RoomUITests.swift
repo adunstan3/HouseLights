@@ -21,7 +21,7 @@ final class RoomUITests: XCTestCase {
         waitForExpectations(timeout: 3)
     }
 
-    func testCrownChangesBrightnessOnTheRoomAndWheelScreens() {
+    func testCrownChangesBrightnessOnTheRoomScreen() {
         let app = XCUIApplication()
         app.launchArguments = ["-uiTesting", "-openScreen", "room", "-openRoom", "Living room"]
         app.launch()
@@ -32,13 +32,6 @@ final class RoomUITests: XCTestCase {
         expectation(for: NSPredicate(format: "label != '70%'"), evaluatedWith: level)
         waitForExpectations(timeout: 5)
 
-        app.descendants(matching: .any)["colorWheelRow"].firstMatch.tap()
-        let readout = app.descendants(matching: .any)["wheelBrightness"].firstMatch
-        XCTAssertTrue(readout.waitForExistence(timeout: 5))
-        let before = readout.label
-        XCUIDevice.shared.rotateDigitalCrown(delta: -0.3)
-        expectation(for: NSPredicate(format: "label != %@", before), evaluatedWith: readout)
-        waitForExpectations(timeout: 5)
     }
 
     func testPinScrollAndRemoveASwatch() {
@@ -62,5 +55,17 @@ final class RoomUITests: XCTestCase {
         expectation(for: gone, evaluatedWith: swatch)
         waitForExpectations(timeout: 3)
     }
-}
 
+    func testCrownScrollsTheColorScreen() {
+        let app = XCUIApplication()
+        app.launchArguments = ["-uiTesting", "-openScreen", "wheel", "-mockSwatches", "YES"]
+        app.launch()
+        let swatch = app.descendants(matching: .any)["swatch-8"].firstMatch   // the last one, far below the wheel
+        XCTAssertTrue(swatch.waitForExistence(timeout: 20))
+        XCTAssertFalse(swatch.isHittable)
+        XCUIDevice.shared.rotateDigitalCrown(delta: 1.5)
+        let shown = NSPredicate(format: "hittable == true")
+        expectation(for: shown, evaluatedWith: swatch)
+        waitForExpectations(timeout: 5)
+    }
+}
