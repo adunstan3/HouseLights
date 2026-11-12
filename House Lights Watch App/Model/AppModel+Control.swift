@@ -40,6 +40,7 @@ extension AppModel {
             store.zeroDimmed.insert(roomID)
             update(roomID) { $0.isOn = false; $0.brightness = 0 }
             enqueue(.power(false), for: room)
+            remoteSceneChanged(roomID)   // the remote brings it back at 70%
         } else {
             store.zeroDimmed.remove(roomID)
             update(roomID) { $0.isOn = true; $0.brightness = v }
@@ -62,6 +63,7 @@ extension AppModel {
                 store.zeroDimmed.insert(id)
                 update(id) { $0.isOn = false; $0.brightness = 0 }
                 enqueue(.power(false), for: room)
+                remoteSceneChanged(id)   // the remote brings it back at 70%
             }
         }
     }

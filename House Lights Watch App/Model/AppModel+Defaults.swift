@@ -138,6 +138,9 @@ extension AppModel {
     /// After a reload: forget rooms that are gone and colors that changed while the app was closed.
     func afterReload() {
         let ids = Set(home.rooms.map(\.id))
+        // A room switched on elsewhere (a remote, while the app was closed) is no longer "dimmed to 0".
+        let lit = Set(home.rooms.filter(\.isOn).map(\.id))
+        if !store.zeroDimmed.isDisjoint(with: lit) { store.zeroDimmed.subtract(lit) }
         temporaryRooms = temporaryRooms.filter { ids.contains($0.key) }
         pendingDefaults = pendingDefaults.intersection(ids)
         checkTemporaryColors(Set(temporaryRooms.keys))

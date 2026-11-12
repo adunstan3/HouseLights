@@ -36,8 +36,11 @@ extension AppModel {
     /// Writes the room's current look (or `color`) into its remote scene, creating it if needed.
     func writeRemoteScene(_ roomID: String, color: LightColor? = nil) async {
         guard let client, let room = room(roomID) else { return }
-        let actions = DefaultScene.actions(for: home.lights(in: room), color: color ?? room.color,
-                                           brightness: room.brightness >= 1 ? room.brightness : nil)
+        // Dimmed to 0% with the Crown or slider: the remote brings it back at 70%, like a tap
+        // in the app. Otherwise the room's last brightness (never 0: the scene means "on").
+        let level: Double? = store.zeroDimmed.contains(roomID) ? CrownBrightness.backOnLevel
+            : (room.brightness >= 1 ? room.brightness : nil)
+        let actions = DefaultScene.actions(for: home.lights(in: room), color: color ?? room.color, brightness: level)
         do {
             if let existing = home.remoteScenes[roomID], !existing.id.isEmpty {
                 try await client.updateScene(id: existing.id, actions: actions)

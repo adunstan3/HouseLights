@@ -101,7 +101,7 @@ Arrange tiles look like the grid's current state: lit rooms in their color, off 
 
 - Settings › Remote scenes shows the rooms as tiles; tap the rooms that have a dimmer switch. Each gets a bridge scene **"House Lights Now – \<room\>"**, created from the room's current look.
 - After every color, warmth or brightness change the watch makes in that room, the scene is rewritten with the new look, about 1.5 s after the room is left alone (one request; the lights themselves change first, as always). Back to default copies the default into it.
-- Turning a room off (tap, All off, dimming to 0%) never changes the scene: it always means "on", at 1% or more.
+- Turning a room off with a tap or All off never changes the scene: it always means "on", at 1% or more. Dimming a room to 0% with the Crown or slider saves it at 70%, so the remote brings it back at 70% (as a tap in the app does).
 - In the Hue app, set each dimmer's On button to its room's "House Lights Now" scene; the remote then turns the room on in whatever the watch last set. The real default stays in "House Lights – \<room\>".
 - Changes made with the Hue app or the remote's dim buttons don't update the scene.
 - Turning a room's tile off on this screen stops updating its scene but leaves the scene on the bridge (a remote may still use it).

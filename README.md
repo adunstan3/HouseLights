@@ -120,7 +120,8 @@ For rooms with a Hue dimmer switch: Settings › Remote scenes, tap the rooms. E
 scene **"House Lights Now – \<room\>"** that the watch rewrites (about 1.5 seconds after you
 stop adjusting) with every color, warmth or brightness change it makes. Set the dimmer's On
 button to that scene in the Hue app and the remote turns the room on in whatever the watch
-last chose. Turning a room off never changes the scene, and Back to default resets it.
+last chose. Turning a room off never saves "off" into it; a room dimmed to 0% comes back at
+70% from the remote, as it does from the app. Back to default resets the scene too.
 
 ### Arrange
 
@@ -246,7 +247,7 @@ using the Apple ID signed in to Xcode.
 
 ## Tests
 
-- **121 unit tests** (Swift Testing, about 3 seconds): color maths and gamut clamping,
+- **124 unit tests** (Swift Testing, about 3 seconds): color maths and gamut clamping,
   command merging and the once-a-second sender, the event-stream parser, building the home
   from bridge-shaped JSON, pairing and certificate pinning, grid sizes, the Crown rules,
   the four Arrange drag rules, defaults and temporary colors, live sending while dragging,

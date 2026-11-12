@@ -87,4 +87,41 @@ struct RemoteSceneTests {
         #expect(await remoteScene(mock, "mock-room-1") == nil)
         #expect(app.store.remoteRooms.isEmpty)
     }
+
+    /// Dimmed to 0% with the Crown: the remote turns it back on at 70%, like a tap in the app.
+    @Test func dimmedToZeroComesBackAtSeventyFromTheRemote() async throws {
+        let (app, mock) = await ready()
+        app.setRemoteScene("mock-room-0", enabled: true)
+        #expect(await eventually { await remoteScene(mock, "mock-room-0") != nil })
+        for _ in 0..<20 { app.crownStep(-1) }                              // 70% → 0% → off
+        #expect(await eventually {
+            await remoteScene(mock, "mock-room-0")?.actions.first?.action.dimming?.brightness == 70
+        })
+        try await Task.sleep(for: .milliseconds(1100))
+        try await mock.simulateRemotePress(roomID: "mock-room-0")
+        #expect(await mock.currentHome.lights["mock-light-0-a"]?.brightness == 70)
+    }
+
+    @Test func sliderToZeroAlsoSavesSeventy() async {
+        let (app, mock) = await ready()
+        app.setRemoteScene("mock-room-3", enabled: true)
+        app.setBrightness(0, roomID: "mock-room-3")
+        #expect(await eventually {
+            await remoteScene(mock, "mock-room-3")?.actions.first?.action.dimming?.brightness == 70
+        })
+    }
+
+    @Test func aRoomTheRemoteTurnedOnIsNoLongerDimmedToZero() async throws {
+        let (app, mock) = await ready()
+        app.setRemoteScene("mock-room-0", enabled: true)
+        #expect(await eventually { await remoteScene(mock, "mock-room-0") != nil })
+        for _ in 0..<20 { app.crownStep(-1) }
+        #expect(app.store.zeroDimmed.contains("mock-room-0"))
+        #expect(await eventually { await remoteScene(mock, "mock-room-0")?.actions.first?.action.dimming?.brightness == 70 })
+        try await Task.sleep(for: .milliseconds(1100))
+        try await mock.simulateRemotePress(roomID: "mock-room-0")     // while the app isn't looking
+        app.lastLocalChange["mock-room-0"] = .distantPast
+        await app.reload()
+        #expect(!app.store.zeroDimmed.contains("mock-room-0"))
+    }
 }
