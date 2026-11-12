@@ -13,7 +13,7 @@ struct RoomSnippetView: View {
                     .font(.system(size: 17, weight: .semibold))
                     .foregroundStyle(room.isOn ? Theme.onAccent : Color(white: 0.6))
                     .frame(width: 36, height: 36)
-                    .background(Circle().fill(room.isOn ? room.displayColor.tileColor : Theme.secondaryButton))
+                    .background(Circle().fill(room.isOn ? room.fill : AnyShapeStyle(Theme.secondaryButton)))
                 VStack(alignment: .leading, spacing: 0) {
                     Text(room.name)
                         .font(.system(size: 18, weight: .bold))

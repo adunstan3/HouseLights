@@ -11,6 +11,7 @@ import Foundation
 /// - `-pillSeconds 10`     keep the Crown pill up longer (UI tests)
 /// - `-mockSwatches YES`   start with a few saved colors on the Color wheel screen
 /// - `-mockFreeLayout YES` start with rooms spread out, including half-way spots
+/// - `-mockHybrid YES`    the living room starts on a moving red-and-blue hybrid
 /// - `-scrollSwatches YES` open the Color wheel scrolled down to the saved colors
 /// - `-realBridge YES`     use the real bridge client even in the simulator
 /// - `-openScreen name`    settings, bridge, log, arrange, room, wheel

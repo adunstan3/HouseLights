@@ -52,7 +52,7 @@ private struct RoomToggle: View {
                 .font(.system(size: compact ? 15 : 17, weight: .semibold))
                 .foregroundStyle(room.isOn ? Theme.onAccent : Color(white: 0.6))
                 .frame(width: compact ? 32 : 36, height: compact ? 32 : 36)
-                .background(Circle().fill(room.isOn ? room.displayColor.tileColor : Theme.secondaryButton))
+                .background(Circle().fill(room.isOn ? room.fill : AnyShapeStyle(Theme.secondaryButton)))
             Text(room.shortName)
                 .font(.system(size: 13, weight: .semibold))
                 .foregroundStyle(.white)

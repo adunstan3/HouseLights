@@ -17,9 +17,9 @@ struct PairingTests {
         }
         func fetchHome() async throws -> HomeSnapshot { .empty }
         func send(_ command: GroupedLightCommand, toGroupedLight id: String) async throws {}
-        func createScene(name: String, roomID: String, actions: [HueSceneAction]) async throws -> String { "" }
-        func updateScene(id: String, actions: [HueSceneAction]) async throws {}
-        func recallScene(id: String, brightness: Double?) async throws {}
+        func createScene(name: String, roomID: String, actions: [HueSceneAction], motion: SceneMotion?) async throws -> String { "" }
+        func updateScene(id: String, actions: [HueSceneAction], motion: SceneMotion?) async throws {}
+        func recallScene(id: String, brightness: Double?, dynamic: Bool) async throws {}
         nonisolated func events() -> AsyncThrowingStream<[HueEvent], any Error> { AsyncThrowingStream { $0.finish() } }
     }
 

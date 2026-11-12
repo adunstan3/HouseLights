@@ -10,6 +10,8 @@ nonisolated struct HomeSnapshot: Sendable, Equatable {
     var defaults: [String: DefaultScene] = [:]
     /// "House Lights Now" scene per room (what its remote turns it on with).
     var remoteScenes: [String: DefaultScene] = [:]
+    /// "House Lights Mix" scene per room (the working scene for hybrids).
+    var mixScenes: [String: DefaultScene] = [:]
     /// The `bridge_home` grouped light, which switches every light at once.
     var allLightsGroupID: String?
 
@@ -52,8 +54,11 @@ nonisolated struct HomeSnapshot: Sendable, Equatable {
         let roomIDs = Set(rooms.map(\.id))
         for s in scenes where roomIDs.contains(s.group.rid) {
             let name = s.metadata.name ?? ""
-            let scene = DefaultScene(id: s.id, roomID: s.group.rid, name: name, actions: s.actions)
+            var scene = DefaultScene(id: s.id, roomID: s.group.rid, name: name, actions: s.actions)
+            scene.palette = s.palette?.color.map { XY(x: $0.color.xy.x, y: $0.color.xy.y) } ?? []
+            scene.autoDynamic = s.auto_dynamic ?? false
             if DefaultScene.isRemoteScene(name) { remoteScenes[s.group.rid] = scene }
+            else if DefaultScene.isMixScene(name) { mixScenes[s.group.rid] = scene }
             else if DefaultScene.isDefaultScene(name) { defaults[s.group.rid] = scene }
         }
     }
@@ -61,7 +66,12 @@ nonisolated struct HomeSnapshot: Sendable, Equatable {
     /// Fills a room's color, gamut and warmth range from its lights.
     static func derive(_ room: inout Room, from lights: [LightState]) {
         let lit = lights.filter(\.isOn)
-        room.color = (lit.isEmpty ? lights : lit).compactMap(\.color).mostCommon
+        let shown = (lit.isEmpty ? lights : lit).compactMap(\.color)
+        room.color = shown.mostCommon
+        var distinct: [LightColor] = []
+        for c in shown where !distinct.contains(where: { $0.isClose(to: c) }) { distinct.append(c) }
+        room.mixColors = distinct.count >= 2 ? Array(distinct.prefix(4)) : nil
+        room.isMoving = lights.contains(where: \.isDynamic) ? true : nil
         room.gamut = lights.compactMap(\.gamut).mostCommon
         let ranges = lights.compactMap(\.mirekRange)
         if let lo = ranges.map(\.lowerBound).max(), let hi = ranges.map(\.upperBound).min(), lo <= hi {
@@ -87,6 +97,7 @@ nonisolated struct HomeSnapshot: Sendable, Equatable {
             guard var light = lights[item.id] else { return [] }
             if let on = item.on { light.isOn = on.on }
             if let d = item.dimming { light.brightness = d.brightness }
+            if let d = item.dynamics?.status { light.isDynamic = d == "dynamic_palette" }
             if let ct = item.color_temperature, let m = ct.mirek, ct.mirek_valid ?? true {
                 light.color = .temperature(mirek: m)
             } else if let c = item.color {

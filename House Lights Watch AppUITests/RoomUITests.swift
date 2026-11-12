@@ -68,4 +68,20 @@ final class RoomUITests: XCTestCase {
         expectation(for: shown, evaluatedWith: swatch)
         waitForExpectations(timeout: 5)
     }
+
+    func testSelectingTwoColorsMakesAHybridWithAMovingToggle() {
+        let app = XCUIApplication()
+        app.launchArguments = ["-uiTesting", "-openScreen", "wheel", "-mockSwatches", "YES", "-scrollSwatches", "YES"]
+        app.launch()
+        let first = app.descendants(matching: .any)["swatch-0"].firstMatch
+        XCTAssertTrue(first.waitForExistence(timeout: 20))
+        first.tap()
+        XCTAssertFalse(app.descendants(matching: .any)["movingToggle"].exists, "one color is a single color")
+        app.descendants(matching: .any)["swatch-1"].firstMatch.tap()
+        XCTAssertTrue(app.descendants(matching: .any)["movingToggle"].firstMatch.waitForExistence(timeout: 3))
+        XCTAssertEqual(first.value as? String, "selected")
+        app.descendants(matching: .any)["swatch-2"].firstMatch.tap()   // 3 colors, 2 bulbs: forced moving
+        XCTAssertTrue(app.staticTexts["More colors than bulbs, so they move."].waitForExistence(timeout: 3))
+    }
 }
+

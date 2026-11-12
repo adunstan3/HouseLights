@@ -61,6 +61,7 @@ actor MockBridgeClient: BridgeClient {
                 light.color = .temperature(mirek: light.mirekRange.map { min(max(m, $0.lowerBound), $0.upperBound) } ?? m)
             }
             if let p = command.xy, let g = light.gamut { light.color = .xy(g.clamp(p)) }
+            if command.xy != nil || command.mirek != nil { light.isDynamic = false }   // a color stops a moving palette
             home.lights[lid] = light
             items.append(lightItem(light))
         }
@@ -68,33 +69,43 @@ actor MockBridgeClient: BridgeClient {
         emit(items)
     }
 
-    func createScene(name: String, roomID: String, actions: [HueSceneAction]) async throws -> String {
+    func createScene(name: String, roomID: String, actions: [HueSceneAction], motion: SceneMotion?) async throws -> String {
         try await respond("POST /clip/v2/resource/scene — \(name)")
         let id = "mock-scene-\(UUID().uuidString.prefix(8))"
-        let scene = DefaultScene(id: id, roomID: roomID, name: name, actions: actions)
-        if DefaultScene.isRemoteScene(name) { home.remoteScenes[roomID] = scene } else { home.defaults[roomID] = scene }
+        var scene = DefaultScene(id: id, roomID: roomID, name: name, actions: actions)
+        scene.palette = motion?.colors ?? []
+        scene.autoDynamic = motion?.moving ?? false
+        if DefaultScene.isRemoteScene(name) { home.remoteScenes[roomID] = scene }
+        else if DefaultScene.isMixScene(name) { home.mixScenes[roomID] = scene }
+        else { home.defaults[roomID] = scene }
         return id
     }
 
-    func updateScene(id: String, actions: [HueSceneAction]) async throws {
+    func updateScene(id: String, actions: [HueSceneAction], motion: SceneMotion?) async throws {
         try await respond("PUT /clip/v2/resource/scene/\(id)")
-        if let roomID = home.remoteScenes.first(where: { $0.value.id == id })?.key {
-            home.remoteScenes[roomID]?.actions = actions
-            return
+        func change(_ s: inout DefaultScene) {
+            s.actions = actions
+            s.palette = motion?.colors ?? []
+            s.autoDynamic = motion?.moving ?? false
         }
+        if let roomID = home.remoteScenes.first(where: { $0.value.id == id })?.key { change(&home.remoteScenes[roomID]!); return }
+        if let roomID = home.mixScenes.first(where: { $0.value.id == id })?.key { change(&home.mixScenes[roomID]!); return }
         guard let roomID = home.defaults.first(where: { $0.value.id == id })?.key else { throw BridgeError.http(404, "no scene") }
-        home.defaults[roomID]?.actions = actions
+        change(&home.defaults[roomID]!)
     }
 
-    func recallScene(id: String, brightness: Double?) async throws {
-        try await respond("PUT /clip/v2/resource/scene/\(id) — recall")
-        guard let scene = (Array(home.defaults.values) + Array(home.remoteScenes.values)).first(where: { $0.id == id })
-        else { throw BridgeError.http(404, "no scene") }
+    func recallScene(id: String, brightness: Double?, dynamic: Bool) async throws {
+        try await respond("PUT /clip/v2/resource/scene/\(id) — recall\(dynamic ? " moving" : "")")
+        let all = Array(home.defaults.values) + Array(home.remoteScenes.values) + Array(home.mixScenes.values)
+        guard let scene = all.first(where: { $0.id == id }) else { throw BridgeError.http(404, "no scene") }
+        // Like the bridge: a moving recall, or a scene with auto_dynamic, plays its palette.
+        let moving = (dynamic || scene.autoDynamic) && scene.palette.count >= 2
         var items: [HueEventItem] = []
         for action in scene.actions {
             guard var light = home.lights[action.target.rid] else { continue }
             light.isOn = action.action.on?.on ?? true
             light.brightness = brightness ?? action.action.dimming?.brightness ?? light.brightness
+            light.isDynamic = moving
             if let m = action.action.color_temperature?.mirek { light.color = .temperature(mirek: m) }
             if let xy = action.action.color?.xy { light.color = .xy(XY(x: xy.x, y: xy.y)) }
             home.lights[light.id] = light
@@ -132,7 +143,7 @@ actor MockBridgeClient: BridgeClient {
     /// Presses a dimmer switch's On button set to the room's remote scene.
     func simulateRemotePress(roomID: String) async throws {
         guard let scene = home.remoteScenes[roomID] else { throw BridgeError.http(404, "no remote scene") }
-        try await recallScene(id: scene.id, brightness: nil)
+        try await recallScene(id: scene.id, brightness: nil, dynamic: false)
     }
 
     /// Sets a room's color as the Hue app (or a power cut) would.
@@ -202,7 +213,8 @@ actor MockBridgeClient: BridgeClient {
     }
 
     private func lightItem(_ light: LightState) -> HueEventItem {
-        var item = HueEventItem(id: light.id, type: "light", on: HueOn(on: light.isOn), dimming: HueDimming(brightness: light.brightness))
+        var item = HueEventItem(id: light.id, type: "light", on: HueOn(on: light.isOn), dimming: HueDimming(brightness: light.brightness),
+                                dynamics: HueLightDynamics(status: light.isDynamic ? "dynamic_palette" : "none"))
         switch light.color {
         case .temperature(let m)?: item.color_temperature = HueColorTemperatureDTO(mirek: m, mirek_valid: true)
         case .xy(let p)?:

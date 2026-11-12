@@ -95,9 +95,20 @@ The largest wheel that fits; brightness is set on the Room screen, so here the C
 scrolls. The color is sent when your finger lifts, converted to Hue's CIE xy
 coordinates and fitted to the colors the room's bulbs can show.
 
+<p>
+  <img src="docs/screenshots/hybrid-colors.png" width="180" alt="Two saved colors selected as a moving hybrid">
+  <img src="docs/screenshots/hybrid-grid.png" width="180" alt="A hybrid room's tile blending its colors">
+</p>
+
+**Hybrids:** tap two or more saved colors and each bulb in the room gets one of them. Turn
+on **Moving** and the bridge slowly morphs the lights between the colors (a Hue dynamic
+scene, so it keeps going after you put the watch away); it's forced on when you pick more
+colors than the room has bulbs. The room's tile blends the colors. Set as default saves a
+hybrid as the room's default, moving included, and remote scenes start it too.
+
 The **pin** button right of the clock saves the current color. Saved colors appear below
 the wheel, four across; turn the Crown or drag the page to scroll to them. Tap a swatch to use it in this
-room, hold it to remove it. They're shared by every room.
+room (or several, for a hybrid), hold it to remove it. They're shared by every room.
 
 ### Defaults and temporary colors
 
@@ -235,7 +246,7 @@ the one you run from Xcode:
 
 Debug launch arguments (simulator / debug builds):
 `-mockTiles 12`, `-unpaired YES`, `-mockOffline YES`, `-mockTemporary YES`,
-`-mockOutsideChanges YES`, `-mockSwatches YES`, `-scrollSwatches YES`, `-mockFreeLayout YES`,
+`-mockOutsideChanges YES`, `-mockSwatches YES`, `-scrollSwatches YES`, `-mockFreeLayout YES`, `-mockHybrid YES`,
 `-realBridge YES`, `-openScreen settings|bridge|log|arrange|room|wheel`,
 `-openRoom "Office"` (`-openScreen remotes` opens Remote scenes).
 
@@ -247,14 +258,14 @@ using the Apple ID signed in to Xcode.
 
 ## Tests
 
-- **124 unit tests** (Swift Testing, about 3 seconds): color maths and gamut clamping,
+- **134 unit tests** (Swift Testing, about 3 seconds): color maths and gamut clamping,
   command merging and the once-a-second sender, the event-stream parser, building the home
   from bridge-shaped JSON, pairing and certificate pinning, grid sizes, the Crown rules,
   the four Arrange drag rules, defaults and temporary colors, live sending while dragging,
   the settle window and reloads racing a tap, saved colors, Siri actions and the widget's
   rooms. Widget and Siri snapshots render
   to PNGs with `TEST_RUNNER_SNAPSHOT_DIR=… scripts/test.sh`.
-- **11 UI tests** (XCTest, about 2 minutes): tap toggles, hold opens without toggling, the
+- **12 UI tests** (XCTest, about 2 minutes): tap toggles, hold opens without toggling, the
   Crown on every screen (and never scrolling the big grid), a real Arrange drag, the
   temporary buttons appearing at once, pinning, scrolling to and removing a saved color, and
   Back going straight to the grid.

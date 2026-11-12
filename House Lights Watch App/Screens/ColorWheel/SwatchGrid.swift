@@ -1,9 +1,10 @@
 import SwiftUI
 
-/// Saved colors under the wheel, four across. Tap uses one; a 0.5 s hold removes it.
+/// Saved colors under the wheel, four across. Tap selects or deselects one (selected ones
+/// get a white ring and their number in a hybrid); a 0.5 s hold removes it.
 struct SwatchGrid: View {
     let swatches: [SavedSwatch]
-    let selected: (hue: Double, saturation: Double)
+    let selection: [SavedSwatch.ID]
     let highlighted: SavedSwatch.ID?
     let onTap: (SavedSwatch) -> Void
     let onRemove: (SavedSwatch) -> Void
@@ -36,10 +37,18 @@ struct SwatchGrid: View {
     }
 
     private func swatchView(_ swatch: SavedSwatch, index: Int) -> some View {
-        let isCurrent = swatch.matches(hue: selected.hue, saturation: selected.saturation)
+        let order = selection.firstIndex(of: swatch.id)
+        let isCurrent = order != nil
         return Circle()
             .fill(Color(swatch.rgb))
             .overlay(Circle().strokeBorder(.white, lineWidth: isCurrent ? 3 : 0))
+            .overlay {
+                if let order, selection.count >= 2 {
+                    Text("\(order + 1)")
+                        .font(.system(size: 13, weight: .bold))
+                        .foregroundStyle(swatch.labelColor)
+                }
+            }
             .overlay(Circle().strokeBorder(Theme.accent, lineWidth: swatch.id == highlighted && !isCurrent ? 2 : 0).padding(-3))
             .frame(width: 36, height: 36)
             .frame(maxWidth: .infinity, minHeight: 40)
@@ -53,9 +62,15 @@ struct SwatchGrid: View {
             .transition(.scale.combined(with: .opacity))
             .accessibilityElement()
             .accessibilityLabel("Saved color \(index + 1)")
+            .accessibilityValue(isCurrent ? "selected" : "")
             .accessibilityAddTraits(.isButton)
             .accessibilityIdentifier("swatch-\(index)")
             .accessibilityAction { onTap(swatch) }
             .accessibilityAction(named: "Remove") { onRemove(swatch) }
     }
+}
+
+extension SavedSwatch {
+    /// Dark or white text on this color.
+    var labelColor: Color { LightColor.xy(ColorMath.xy(rgb: rgb)).labelColor }
 }

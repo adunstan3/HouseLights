@@ -10,7 +10,7 @@ struct RoomTile: View {
 
     var body: some View {
         RoundedRectangle(cornerRadius: size * 0.21, style: .continuous)
-            .fill(room.isOn ? room.displayColor.tileColor : Theme.card)
+            .fill(room.isOn ? room.fill : AnyShapeStyle(Theme.card))
             .overlay {
                 VStack(spacing: size * 0.03) {
                     Image(systemName: room.iconName)

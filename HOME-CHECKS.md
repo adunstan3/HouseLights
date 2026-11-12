@@ -58,6 +58,12 @@ request, response code and error is there (newest first).
   dimming: { brightness } }` to keep the room's brightness. Confirm the brightness stays put.
 - **Remote scenes:** that a dimmer's On button picks up a scene's new contents after the watch
   rewrites it (it should: the button recalls the scene by id).
+- **Hybrids (dynamic scenes):** a hybrid is a scene "House Lights Mix – <room>" with per-light
+  colors, a `palette`, `speed` 0.25 and `auto_dynamic`; moving ones are recalled with
+  `"action": "dynamic_palette"` (from the openhue API description; speed is set when the scene is
+  written because the bridge refuses speed in the same request as a recall). Check: pick two
+  colors, then three in a two-bulb room (forced moving): the lights should slowly morph, and keep
+  going with the watch away. If not, the log shows the bridge's reply to the scene PUT.
 - **Scene names** are kept within 32 characters (the limit a third-party Hue connector
   documents). Long room names are shortened in the scene name.
 - **Event stream on watchOS.** watchOS may close long-lived connections when the wrist drops;

@@ -8,7 +8,7 @@ nonisolated struct SharedStore: @unchecked Sendable {
     init(defaults: UserDefaults = AppGroup.defaults) { self.defaults = defaults }
 
     private enum Key: String {
-        case bridgeIP, gridOrder, temporaryRooms, pendingDefaults, zeroDimmed, lastKnownRooms, gridArrangement, remoteRooms
+        case bridgeIP, gridOrder, temporaryRooms, pendingDefaults, zeroDimmed, lastKnownRooms, gridArrangement, remoteRooms, hybrids, pendingMix
     }
 
     var bridgeIP: String? {
@@ -32,6 +32,18 @@ nonisolated struct SharedStore: @unchecked Sendable {
     var remoteRooms: Set<String> {
         get { Set(defaults.stringArray(forKey: Key.remoteRooms.rawValue) ?? []) }
         nonmutating set { defaults.set(Array(newValue).sorted(), forKey: Key.remoteRooms.rawValue) }
+    }
+
+    /// The hybrid each room last showed (several colors, maybe moving).
+    var hybrids: [String: Hybrid] {
+        get { decode(Key.hybrids) ?? [:] }
+        nonmutating set { encode(newValue, Key.hybrids) }
+    }
+
+    /// Rooms whose hybrid was chosen while off.
+    var pendingMix: Set<String> {
+        get { Set(defaults.stringArray(forKey: Key.pendingMix.rawValue) ?? []) }
+        nonmutating set { defaults.set(Array(newValue).sorted(), forKey: Key.pendingMix.rawValue) }
     }
 
     /// Rooms showing a temporary color, with the color the app set.

@@ -19,6 +19,11 @@ nonisolated struct Room: Codable, Sendable, Hashable, Identifiable {
     var gamut: Gamut?
     /// The warmth range every bulb in the room supports.
     var mirekRange: ClosedRange<Int>?
+    /// The different colors its lights show when they don't all match (a hybrid), up to four.
+    /// Nil when they're all one color. Optional so older saved rooms still decode.
+    var mixColors: [LightColor]?
+    /// True while the bridge is morphing its lights (a moving hybrid).
+    var isMoving: Bool?
 
     var percent: Int { Int(brightness.rounded()) }
     var iconName: String { RoomIcon.symbol(archetype: archetype, kind: kind) }

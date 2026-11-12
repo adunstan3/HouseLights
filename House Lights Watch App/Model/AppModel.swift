@@ -58,6 +58,8 @@ final class AppModel {
         pendingDefaults = store.pendingDefaults
         savedSwatches = store.savedSwatches
         remoteRooms = store.remoteRooms
+        hybrids = store.hybrids
+        pendingMix = store.pendingMix
         savedArrangement = store.gridArrangement
     }
 
@@ -68,6 +70,11 @@ final class AppModel {
     var temporaryRooms: [String: LightColor] = [:] { didSet { store.temporaryRooms = temporaryRooms } }
     /// Rooms whose Back to default was tapped while off.
     var pendingDefaults: Set<String> = [] { didSet { store.pendingDefaults = pendingDefaults } }
+    /// The hybrid the app last showed in each room (several colors, maybe moving).
+    var hybrids: [String: Hybrid] = [:] { didSet { store.hybrids = hybrids } }
+    /// Rooms whose hybrid was chosen while off; shown when the app next turns them on.
+    var pendingMix: Set<String> = [] { didSet { store.pendingMix = pendingMix } }
+    @ObservationIgnored var mixTasks: [String: Task<Void, Never>] = [:]
     /// Rooms whose "House Lights Now" remote scene the watch keeps up to date.
     var remoteRooms: Set<String> = [] { didSet { store.remoteRooms = remoteRooms } }
     @ObservationIgnored var remoteSceneTasks: [String: Task<Void, Never>] = [:]

@@ -20,6 +20,7 @@ extension AppModel {
     private func apply(_ color: LightColor, command: GroupedLightCommand, to room: Room) {
         // An off room stays off: the color is sent without "on". Current Hue bulbs keep a
         // change made while off and show it when next switched on.
+        clearHybrid(room.id)
         let wasDefault = prepareColorChange(room)
         update(room.id) { $0.color = color }
         for id in room.lightIDs where home.lights[id] != nil {

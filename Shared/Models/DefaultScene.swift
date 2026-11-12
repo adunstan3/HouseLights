@@ -8,6 +8,25 @@ nonisolated struct DefaultScene: Sendable, Hashable, Identifiable {
     var roomID: String
     var name: String
     var actions: [HueSceneAction]
+    /// Hybrid scenes: the palette colors and whether the scene starts moving when recalled.
+    var palette: [XY] = []
+    var autoDynamic = false
+
+    var motion: SceneMotion? {
+        palette.count >= 2 ? SceneMotion(colors: palette, brightness: actions.first?.action.dimming?.brightness ?? 100,
+                                         moving: autoDynamic) : nil
+    }
+
+    /// The different colors its lights are set to (more than one for a hybrid).
+    var colors: [LightColor] {
+        var out: [LightColor] = []
+        for a in actions {
+            let c: LightColor? = a.action.color_temperature.map { .temperature(mirek: $0.mirek) }
+                ?? a.action.color.map { .xy(XY(x: $0.xy.x, y: $0.xy.y)) }
+            if let c, !out.contains(where: { $0.isClose(to: c) }) { out.append(c) }
+        }
+        return out
+    }
 
     static let prefix = "House Lights"
     static let maxNameLength = 32
@@ -18,8 +37,29 @@ nonisolated struct DefaultScene: Sendable, Hashable, Identifiable {
         return head + room
     }
 
-    /// A room's default: "House Lights – <room>" (not a "House Lights Now" remote scene).
-    static func isDefaultScene(_ name: String) -> Bool { name.hasPrefix(prefix) && !isRemoteScene(name) }
+    /// A room's default: "House Lights – <room>" (not a "House Lights Now" or "Mix" scene).
+    static func isDefaultScene(_ name: String) -> Bool { name.hasPrefix(prefix) && !isRemoteScene(name) && !isMixScene(name) }
+
+    /// The working scene the watch uses to show a hybrid: "House Lights Mix – <room>".
+    static let mixPrefix = "House Lights Mix"
+    static func mixName(for roomName: String) -> String {
+        let head = "\(mixPrefix) – "
+        return head + String(roomName.prefix(maxNameLength - head.count))
+    }
+    static func isMixScene(_ name: String) -> Bool { name.hasPrefix(mixPrefix) }
+
+    /// Per-light actions for a hybrid: each light its own color, all at `brightness`.
+    static func actions(for lights: [LightState], assignments: [String: XY], brightness: Double?) -> [HueSceneAction] {
+        lights.map { light in
+            let level = min(max(brightness ?? light.brightness, 1), 100)
+            var body = HueSceneActionBody(on: HueOn(on: true), dimming: HueDimming(brightness: level))
+            if let p = assignments[light.id], let g = light.gamut {
+                let c = g.clamp(p)
+                body.color = HueSceneColor(xy: HueXY(x: c.x, y: c.y))
+            }
+            return HueSceneAction(target: HueRef(rid: light.id, rtype: "light"), action: body)
+        }
+    }
 
     // MARK: Remote scenes
 

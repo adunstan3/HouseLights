@@ -19,6 +19,7 @@ extension AppModel {
             return
         }
         if turnOnWithDefault(roomID) { return }   // Back to default while off (milestone 5)
+        if turnOnWithMix(roomID) { return }       // a hybrid chosen while off
         if store.zeroDimmed.contains(roomID) {
             // Only a room the Crown or slider dimmed to 0% comes back at 70% (the bulbs would
             // otherwise return at the very bottom). A room switched off with a tap comes back

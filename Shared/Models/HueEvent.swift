@@ -42,14 +42,17 @@ nonisolated struct HueEventItem: Decodable, Sendable {
     var color: HueEventColor?
     var color_temperature: HueColorTemperatureDTO?
     var metadata: HueMetadata?
+    var dynamics: HueLightDynamics?
 
     init(id: String, type: String, owner: HueRef? = nil, on: HueOn? = nil, dimming: HueDimming? = nil,
-         color: HueEventColor? = nil, color_temperature: HueColorTemperatureDTO? = nil, metadata: HueMetadata? = nil) {
+         color: HueEventColor? = nil, color_temperature: HueColorTemperatureDTO? = nil, metadata: HueMetadata? = nil,
+         dynamics: HueLightDynamics? = nil) {
         self.id = id; self.type = type; self.owner = owner; self.on = on; self.dimming = dimming
         self.color = color; self.color_temperature = color_temperature; self.metadata = metadata
+        self.dynamics = dynamics
     }
 
-    private enum Keys: String, CodingKey { case id, type, owner, on, dimming, color, color_temperature, metadata }
+    private enum Keys: String, CodingKey { case id, type, owner, on, dimming, color, color_temperature, metadata, dynamics }
 
     /// Only `id` and `type` are required; every other field is read on its own.
     init(from decoder: any Decoder) throws {
@@ -62,6 +65,7 @@ nonisolated struct HueEventItem: Decodable, Sendable {
         color = try? c.decodeIfPresent(HueEventColor.self, forKey: .color)
         color_temperature = try? c.decodeIfPresent(HueColorTemperatureDTO.self, forKey: .color_temperature)
         metadata = try? c.decodeIfPresent(HueMetadata.self, forKey: .metadata)
+        dynamics = try? c.decodeIfPresent(HueLightDynamics.self, forKey: .dynamics)
     }
 }
 

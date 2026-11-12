@@ -46,3 +46,20 @@ extension LightColor {
         return luminance > 0.55 ? Theme.onAccent : .white
     }
 }
+
+/// Fills for colors that may be a hybrid: one color, or a diagonal blend of several.
+enum ColorFill {
+    static func of(_ colors: [LightColor]) -> AnyShapeStyle {
+        if colors.count >= 2 {
+            return AnyShapeStyle(LinearGradient(colors: colors.map(\.tileColor), startPoint: .topLeading, endPoint: .bottomTrailing))
+        }
+        return AnyShapeStyle((colors.first ?? .warmWhite).tileColor)
+    }
+}
+
+extension Room {
+    /// What a lit tile or swatch is filled with: the room's color, or a blend of its hybrid's colors.
+    var colors: [LightColor] { mixColors ?? [displayColor] }
+    var fill: AnyShapeStyle { ColorFill.of(colors) }
+}
+

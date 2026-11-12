@@ -93,6 +93,7 @@ nonisolated struct HueLightDTO: Decodable, Sendable {
     var dimming: HueDimming?
     var color: HueColorDTO?
     var color_temperature: HueColorTemperatureDTO?
+    var dynamics: HueLightDynamics?
 }
 
 nonisolated struct HueSceneActionBody: Codable, Sendable, Hashable {
@@ -116,6 +117,10 @@ nonisolated struct HueSceneDTO: Decodable, Sendable {
     /// The room or zone the scene belongs to.
     var group: HueRef
     var actions: [HueSceneAction]
+    /// Colors the bridge morphs through when the scene plays dynamically (hybrids).
+    var palette: HueScenePalette?
+    /// Starts moving whenever the scene is recalled (including from a dimmer switch).
+    var auto_dynamic: Bool?
 }
 
 /// POST /api pairing reply: an array holding either `success` or `error`.

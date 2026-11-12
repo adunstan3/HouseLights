@@ -92,8 +92,9 @@ nonisolated final class HueBridgeClient: BridgeClient {
                               note: command.summary)
     }
 
-    func createScene(name: String, roomID: String, actions: [HueSceneAction]) async throws -> String {
-        let body = SceneCreate(metadata: HueMetadata(name: name), group: HueRef(rid: roomID, rtype: "room"), actions: actions)
+    func createScene(name: String, roomID: String, actions: [HueSceneAction], motion: SceneMotion?) async throws -> String {
+        let body = SceneCreate(metadata: HueMetadata(name: name), group: HueRef(rid: roomID, rtype: "room"), actions: actions,
+                               palette: motion?.palette, speed: motion?.speed, auto_dynamic: motion?.moving)
         let data = try await perform("POST", "/clip/v2/resource/scene", body: try JSONEncoder().encode(body), note: name)
         guard let id = try decode(HueResponse<HueRef>.self, data).data.first?.rid else {
             throw BridgeError.badResponse("no scene id")
@@ -101,15 +102,21 @@ nonisolated final class HueBridgeClient: BridgeClient {
         return id
     }
 
-    func updateScene(id: String, actions: [HueSceneAction]) async throws {
-        _ = try await perform("PUT", "/clip/v2/resource/scene/\(id)", body: try JSONEncoder().encode(["actions": actions]))
+    func updateScene(id: String, actions: [HueSceneAction], motion: SceneMotion?) async throws {
+        let body = SceneUpdate(actions: actions, palette: motion?.palette, speed: motion?.speed, auto_dynamic: motion?.moving)
+        _ = try await perform("PUT", "/clip/v2/resource/scene/\(id)", body: try JSONEncoder().encode(body),
+                              note: motion.map { $0.moving ? "moving mix" : "mix" })
     }
 
-    func recallScene(id: String, brightness: Double?) async throws {
+    func recallScene(id: String, brightness: Double?, dynamic: Bool) async throws {
         // `recall.dimming` overrides the scene's stored brightness for every light.
-        let recall = SceneRecall(recall: .init(action: "active", dimming: brightness.map { HueDimming(brightness: min(max($0, 1), 100)) }))
+        // "dynamic_palette" starts the palette moving; "active" applies the per-light actions
+        // (and starts moving anyway if the scene has auto_dynamic). Speed can't be changed in
+        // the same request as a recall, so it's set when the scene is written.
+        let recall = SceneRecall(recall: .init(action: dynamic ? "dynamic_palette" : "active",
+                                               dimming: brightness.map { HueDimming(brightness: min(max($0, 1), 100)) }))
         _ = try await perform("PUT", "/clip/v2/resource/scene/\(id)", body: try JSONEncoder().encode(recall),
-                              note: brightness.map { "recall at \(Int($0))%" } ?? "recall")
+                              note: (dynamic ? "recall moving" : "recall") + (brightness.map { " at \(Int($0))%" } ?? ""))
     }
 
     private struct SceneCreate: Encodable {
@@ -117,6 +124,16 @@ nonisolated final class HueBridgeClient: BridgeClient {
         var metadata: HueMetadata
         var group: HueRef
         var actions: [HueSceneAction]
+        var palette: HueScenePalette?
+        var speed: Double?
+        var auto_dynamic: Bool?
+    }
+
+    private struct SceneUpdate: Encodable {
+        var actions: [HueSceneAction]
+        var palette: HueScenePalette?
+        var speed: Double?
+        var auto_dynamic: Bool?
     }
 
     private struct SceneRecall: Encodable {

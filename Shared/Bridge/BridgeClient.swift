@@ -12,11 +12,13 @@ nonisolated protocol BridgeClient: Sendable {
     /// PUT to a room's (or the all-lights) grouped_light.
     func send(_ command: GroupedLightCommand, toGroupedLight id: String) async throws
 
-    /// Creates a scene in a room; returns its id.
-    func createScene(name: String, roomID: String, actions: [HueSceneAction]) async throws -> String
-    func updateScene(id: String, actions: [HueSceneAction]) async throws
+    /// Creates a scene in a room; returns its id. `motion` makes it a hybrid (palette, and
+    /// whether it starts moving when recalled).
+    func createScene(name: String, roomID: String, actions: [HueSceneAction], motion: SceneMotion?) async throws -> String
+    func updateScene(id: String, actions: [HueSceneAction], motion: SceneMotion?) async throws
     /// Recalls a scene, optionally at a given brightness instead of the scene's own.
-    func recallScene(id: String, brightness: Double?) async throws
+    /// `dynamic` starts its palette moving ("dynamic_palette") instead of a still recall.
+    func recallScene(id: String, brightness: Double?, dynamic: Bool) async throws
 
     /// The live event stream. It ends (or throws) when the connection drops; callers reconnect.
     func events() -> AsyncThrowingStream<[HueEvent], any Error>
@@ -34,6 +36,16 @@ nonisolated struct LiveStates: Sendable, Equatable {
 }
 
 extension BridgeClient {
+    func createScene(name: String, roomID: String, actions: [HueSceneAction]) async throws -> String {
+        try await createScene(name: name, roomID: roomID, actions: actions, motion: nil)
+    }
+    func updateScene(id: String, actions: [HueSceneAction]) async throws {
+        try await updateScene(id: id, actions: actions, motion: nil)
+    }
+    func recallScene(id: String, brightness: Double?) async throws {
+        try await recallScene(id: id, brightness: brightness, dynamic: false)
+    }
+
     /// Default: read everything (mock and test bridges).
     func fetchStates() async throws -> LiveStates {
         let home = try await fetchHome()

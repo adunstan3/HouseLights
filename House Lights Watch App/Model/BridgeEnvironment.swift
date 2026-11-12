@@ -42,8 +42,23 @@ struct BridgeEnvironment {
     static func current(log: LogSink, store: SharedStore) -> BridgeEnvironment {
         guard RuntimeEnvironment.usesMockBridge else { return .live(store: store) }
         let tiles = RuntimeEnvironment.debugValue("mockTiles").flatMap(Int.init) ?? 6
-        let client = MockBridgeClient(home: MockHome.sample(tiles: tiles),
-                                      reachable: !RuntimeEnvironment.flag("mockOffline"), log: log)
+        var home = MockHome.sample(tiles: tiles)
+        if RuntimeEnvironment.flag("mockHybrid") {
+            // The living room shows a moving red-and-blue hybrid (and those swatches are saved).
+            let red = WheelColor(hue: 0, saturation: 1), blue = WheelColor(hue: 0.62, saturation: 0.85)
+            store.savedSwatches = [red, WheelColor(hue: 0.08, saturation: 0.9), blue, WheelColor(hue: 0.33, saturation: 0.8)]
+                .map { SavedSwatch(hue: $0.hue, saturation: $0.saturation) }
+            store.hybrids = ["mock-room-0": Hybrid(colors: [red, blue], moving: true)]
+            store.temporaryRooms = ["mock-room-0": .xy(red.xy(in: .c))]
+            home.lights["mock-light-0-a"]?.color = .xy(red.xy(in: .c))
+            home.lights["mock-light-0-b"]?.color = .xy(blue.xy(in: .c))
+            home.lights["mock-light-0-a"]?.isDynamic = true
+            home.lights["mock-light-0-b"]?.isDynamic = true
+            if let i = home.rooms.firstIndex(where: { $0.id == "mock-room-0" }) {
+                HomeSnapshot.derive(&home.rooms[i], from: home.lights(in: home.rooms[i]))
+            }
+        }
+        let client = MockBridgeClient(home: home, reachable: !RuntimeEnvironment.flag("mockOffline"), log: log)
         if RuntimeEnvironment.flag("mockTemporary") {
             // The living room shows 2200 K while its default is 2700 K.
             store.temporaryRooms = ["mock-room-0": .temperature(mirek: 454)]

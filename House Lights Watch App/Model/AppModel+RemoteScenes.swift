@@ -23,31 +23,45 @@ extension AppModel {
     /// Called after every change the watch makes to a room. Saves the scene once the room has
     /// been left alone for `remoteSceneDelay`, so dragging a slider is one write, not dozens.
     /// The lights themselves are changed first, exactly as before.
-    func remoteSceneChanged(_ roomID: String, color: LightColor? = nil) {
+    func remoteSceneChanged(_ roomID: String, color: LightColor? = nil, copying scene: DefaultScene? = nil) {
         guard remoteRooms.contains(roomID) else { return }
         remoteSceneTasks[roomID]?.cancel()
         remoteSceneTasks[roomID] = Task { [weak self] in
             try? await Task.sleep(for: self?.remoteSceneDelay ?? .seconds(1.5))
             guard !Task.isCancelled else { return }
-            await self?.writeRemoteScene(roomID, color: color)
+            await self?.writeRemoteScene(roomID, color: color, copying: scene)
         }
     }
 
     /// Writes the room's current look (or `color`) into its remote scene, creating it if needed.
-    func writeRemoteScene(_ roomID: String, color: LightColor? = nil) async {
+    func writeRemoteScene(_ roomID: String, color: LightColor? = nil, copying scene: DefaultScene? = nil) async {
         guard let client, let room = room(roomID) else { return }
         // Dimmed to 0% with the Crown or slider: the remote brings it back at 70%, like a tap
         // in the app. Otherwise the room's last brightness (never 0: the scene means "on").
         let level: Double? = store.zeroDimmed.contains(roomID) ? CrownBrightness.backOnLevel
             : (room.brightness >= 1 ? room.brightness : nil)
-        let actions = DefaultScene.actions(for: home.lights(in: room), color: color ?? room.color, brightness: level)
+        var actions = DefaultScene.actions(for: home.lights(in: room), color: color ?? room.color, brightness: level)
+        var motion: SceneMotion?
+        if let scene {
+            // Copy a scene (Back to default), hybrid included, at the room's level.
+            actions = scene.actions.map { a in
+                var a = a
+                if let level { a.action.dimming = HueDimming(brightness: level) }
+                return a
+            }
+            motion = scene.motion
+        } else if let hybrid = hybrids[roomID] {
+            (actions, motion) = mixScene(for: room, hybrid: hybrid)   // the remote starts the hybrid, moving if set
+        }
         do {
             if let existing = home.remoteScenes[roomID], !existing.id.isEmpty {
-                try await client.updateScene(id: existing.id, actions: actions)
+                try await client.updateScene(id: existing.id, actions: actions, motion: motion)
                 home.remoteScenes[roomID]?.actions = actions
+                home.remoteScenes[roomID]?.palette = motion?.colors ?? []
+                home.remoteScenes[roomID]?.autoDynamic = motion?.moving ?? false
             } else {
                 let name = DefaultScene.remoteName(for: room.name)
-                let id = try await client.createScene(name: name, roomID: roomID, actions: actions)
+                let id = try await client.createScene(name: name, roomID: roomID, actions: actions, motion: motion)
                 home.remoteScenes[roomID] = DefaultScene(id: id, roomID: roomID, name: name, actions: actions)
                 log.add(.info, "Created remote scene \"\(name)\"")
             }

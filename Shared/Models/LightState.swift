@@ -13,6 +13,8 @@ nonisolated struct LightState: Codable, Sendable, Hashable, Identifiable {
     var gamut: Gamut?
     /// Mirek range the bulb supports, for clamping warmth.
     var mirekRange: ClosedRange<Int>?
+    /// True while the bridge is playing a palette on it (a moving hybrid).
+    var isDynamic = false
 
     init(id: String, deviceID: String, isOn: Bool, brightness: Double, color: LightColor?,
          gamut: Gamut?, mirekRange: ClosedRange<Int>?) {
@@ -28,6 +30,7 @@ nonisolated struct LightState: Codable, Sendable, Hashable, Identifiable {
         color = LightState.color(ct: dto.color_temperature, color: dto.color)
         gamut = dto.color?.gamut.map(Gamut.init) ?? (dto.color == nil ? nil : .c)
         if let s = dto.color_temperature?.mirek_schema { mirekRange = s.mirek_minimum...s.mirek_maximum }
+        isDynamic = dto.dynamics?.status == "dynamic_palette"
     }
 
     /// Hue v2 has no explicit color mode: a light showing white has a valid mirek,

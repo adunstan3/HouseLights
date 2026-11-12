@@ -48,9 +48,10 @@ extension AppModel {
     func backToDefault(_ roomID: String) {
         guard let room = room(roomID), let scene = home.defaults[roomID] else { return }
         temporaryRooms[roomID] = nil
+        clearHybrid(roomID)
         defaultsError = nil
-        // The remote follows: its scene goes back to the default too.
-        remoteSceneChanged(roomID, color: scene.color)
+        // The remote follows: its scene goes back to the default too (a hybrid default included).
+        remoteSceneChanged(roomID, copying: scene)
         if room.isOn {
             recall(scene, in: room, brightness: room.brightness)
         } else {
@@ -62,19 +63,25 @@ extension AppModel {
     /// Set as default: rewrite the room's scene with what the lights show now.
     func setAsDefault(_ roomID: String) {
         guard let room = room(roomID), let client else { return }
-        let actions = DefaultScene.actions(for: home.lights(in: room), color: room.color)
+        // A hybrid is saved as one: each bulb's color, the palette, and whether it moves.
+        var actions = DefaultScene.actions(for: home.lights(in: room), color: room.color)
+        var motion: SceneMotion?
+        if let hybrid = hybrids[roomID] { (actions, motion) = mixScene(for: room, hybrid: hybrid) }
         temporaryRooms[roomID] = nil
         pendingDefaults.remove(roomID)
         defaultsError = nil
         let name = DefaultScene.name(for: room.name)
         let existing = home.defaults[roomID]
-        home.defaults[roomID] = DefaultScene(id: existing?.id ?? "", roomID: roomID, name: existing?.name ?? name, actions: actions)
+        var saved = DefaultScene(id: existing?.id ?? "", roomID: roomID, name: existing?.name ?? name, actions: actions)
+        saved.palette = motion?.colors ?? []
+        saved.autoDynamic = motion?.moving ?? false
+        home.defaults[roomID] = saved
         Task {
             do {
                 if let existing, !existing.id.isEmpty {
-                    try await client.updateScene(id: existing.id, actions: actions)
+                    try await client.updateScene(id: existing.id, actions: actions, motion: motion)
                 } else {
-                    let id = try await client.createScene(name: name, roomID: roomID, actions: actions)
+                    let id = try await client.createScene(name: name, roomID: roomID, actions: actions, motion: motion)
                     home.defaults[roomID]?.id = id
                 }
                 log.add(.info, "Saved \(room.name)'s default")
@@ -103,6 +110,7 @@ extension AppModel {
             if let m = action.action.color_temperature?.mirek { home.lights[id]?.color = .temperature(mirek: m) }
             if let xy = action.action.color?.xy { home.lights[id]?.color = .xy(XY(x: xy.x, y: xy.y)) }
             home.lights[id]?.isOn = true
+            home.lights[id]?.isDynamic = scene.autoDynamic && scene.palette.count >= 2   // a moving default
         }
         let lights = home.lights(in: room)   // read before update() starts modifying home
         update(room.id) {
@@ -124,6 +132,15 @@ extension AppModel {
     func checkTemporaryColors(_ roomIDs: Set<String>, turnedOnOutside: Set<String> = []) {
         var temporary = temporaryRooms
         for id in roomIDs {
+            // A hybrid: kept while the bulbs morph or still show its colors.
+            if let hybrid = hybrids[id], let room = room(id) {
+                if !stillShowsHybrid(room, hybrid) {
+                    hybrids[id] = nil
+                    temporary[id] = nil
+                    log.add(.info, "\(room.name)'s colors changed outside the app; hybrid no longer shown")
+                }
+                continue
+            }
             guard let set = temporary[id], let room = room(id), let now = room.color else { continue }
             if !now.isClose(to: set) {
                 temporary[id] = nil

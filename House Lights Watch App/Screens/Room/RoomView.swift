@@ -40,7 +40,7 @@ struct RoomTopRow: View {
                 .font(.system(size: 17, weight: .bold))
                 .foregroundStyle(room.isOn ? Theme.onAccent : .white)
                 .frame(width: 36, height: 36)
-                .background(Circle().fill(room.isOn ? room.displayColor.tileColor : Theme.secondaryButton))
+                .background(Circle().fill(room.isOn ? room.fill : AnyShapeStyle(Theme.secondaryButton)))
                 .padding(2)
                 .contentShape(Circle())
                 .onTapGesture(perform: onPower)
