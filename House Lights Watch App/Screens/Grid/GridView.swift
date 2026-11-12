@@ -62,23 +62,28 @@ struct GridView: View {
 
     @ViewBuilder
     private func tiles(in size: CGSize) -> some View {
-        let rooms = app.rooms
-        let layout = GridLayout.make(count: rooms.count, width: size.width, height: size.height)
-        let grid = LazyVGrid(columns: Array(repeating: GridItem(.fixed(layout.tile), spacing: layout.spacing), count: layout.columns),
-                             spacing: layout.spacing) {
-            ForEach(rooms) { room in
-                TileButton(room: room, size: layout.tile,
-                           onTap: { app.toggle(room.id) },
-                           onHold: { router.push(.room(room.id)) })
+        let arrangement = app.arrangement
+        let count = arrangement.slots.count
+        let rows = max(arrangement.rowsUsed, 1)
+        let layout = GridLayout.make(count: count, rows: rows, width: size.width, height: size.height)
+        // Rooms sit where Arrange put them: gaps stay, and half-way spots are allowed.
+        let grid = ZStack(alignment: .topLeading) {
+            ForEach(arrangement.readingOrder, id: \.self) { id in
+                if let room = app.room(id), let slot = arrangement.slots[id] {
+                    let f = layout.frame(of: slot)
+                    TileButton(room: room, size: layout.tile,
+                               onTap: { app.toggle(room.id) },
+                               onHold: { router.push(.room(room.id)) })
+                        .position(x: f.midX, y: f.midY)
+                }
             }
         }
-        .frame(width: layout.gridWidth)
+        .frame(width: layout.gridWidth, height: layout.height(rows: rows), alignment: .topLeading)
         .frame(maxWidth: .infinity)
 
         if layout.scrolls {
             // Drag to scroll. The Crown is bound to brightness above, so it can't scroll this.
             ScrollView(.vertical, showsIndicators: false) { grid.padding(.bottom, 20) }
-                .scrollDisabled(false)
         } else {
             grid.frame(maxHeight: .infinity, alignment: .top)
         }

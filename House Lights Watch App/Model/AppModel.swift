@@ -31,6 +31,9 @@ final class AppModel {
     private(set) var client: (any BridgeClient)?
 
     private var streamTask: Task<Void, Never>?
+    private var pollTask: Task<Void, Never>?
+    /// How often the backup poll reads the lights' state while the app is open.
+    var pollInterval: Duration = .seconds(3)
     private var reloadTask: Task<Void, Never>?
     /// When the app last sent something to each room, so stream echoes aren't mistaken for outside changes.
     var lastLocalChange: [String: Date] = [:]
@@ -54,6 +57,7 @@ final class AppModel {
         temporaryRooms = store.temporaryRooms
         pendingDefaults = store.pendingDefaults
         savedSwatches = store.savedSwatches
+        savedArrangement = store.gridArrangement
     }
 
     /// The user's grid order (room ids), kept here so the grid redraws when Arrange changes it.
@@ -66,8 +70,17 @@ final class AppModel {
     /// Colors pinned on the Color wheel screen (newest first), shared by every room.
     var savedSwatches: [SavedSwatch] = [] { didSet { store.savedSwatches = savedSwatches } }
 
-    /// The grid's tiles: Hue rooms (not zones) in the user's order.
-    var rooms: [Room] { GridOrder.apply(gridOrder, to: home.rooms.filter { $0.kind == .room }) }
+    /// Where each room sits on the grid (saved by Arrange; nil until then).
+    var savedArrangement: GridArrangement? { didSet { store.gridArrangement = savedArrangement } }
+
+    /// The grid's arrangement: saved spots kept, new rooms in the first free spot.
+    var arrangement: GridArrangement {
+        let ids = GridOrder.apply(gridOrder, to: home.rooms.filter { $0.kind == .room }).map(\.id)
+        return GridArrangement.make(roomIDs: ids, saved: savedArrangement)
+    }
+
+    /// The grid's tiles: Hue rooms (not zones), top-left to bottom-right.
+    var rooms: [Room] { arrangement.readingOrder.compactMap { home.room($0) } }
 
     var isActive = false
 
@@ -110,7 +123,7 @@ final class AppModel {
             phase = .ready
             log.add(.info, "Loaded \(fresh.rooms.filter { $0.kind == .room }.count) rooms, \(fresh.rooms.filter { $0.kind == .zone }.count) zones, \(fresh.lights.count) lights")
             afterReload()
-            if isActive { startEventStream() }
+            if isActive { startEventStream(); startPolling() }
             // Siri learns the rooms' Hue names; the widget picks up their state.
             if !RuntimeEnvironment.isTesting { HouseLightsShortcuts.updateAppShortcutParameters() }
             WidgetCenter.shared.reloadAllTimelines()
@@ -185,17 +198,21 @@ final class AppModel {
         streamTask = Task { [weak self] in
             var delay: Duration = .seconds(1)
             while !Task.isCancelled {
+                var received = 0
                 do {
                     self?.streamConnected = true
                     for try await events in client.events() {
                         guard let self else { return }
                         if !self.streamConnected { self.streamConnected = true; delay = .seconds(1) }
+                        received += 1
+                        // Says in the log whether live updates really arrive on this watch.
+                        if received == 1 { self.log.add(.event, "Event stream: first update received") }
                         self.apply(events)
                     }
                 } catch {}
                 guard let self, !Task.isCancelled else { return }
                 self.streamConnected = false
-                self.log.add(.info, "Event stream dropped; reconnecting in \(delay.components.seconds) s")
+                self.log.add(.info, "Event stream dropped after \(received) updates; reconnecting in \(delay.components.seconds) s")
                 try? await Task.sleep(for: delay)
                 delay = min(delay * 2, .seconds(30))
             }
@@ -206,6 +223,63 @@ final class AppModel {
         streamTask?.cancel()
         streamTask = nil
         streamConnected = false
+        stopPolling()
+    }
+
+    // MARK: Backup polling
+
+    /// While the app is open, reads the lights' state every few seconds as well, so changes
+    /// from remotes, switches and the Hue app show up even if the event stream isn't
+    /// delivering. Quiet in the log unless a read fails.
+    func startPolling() {
+        guard pollTask == nil, let client else { return }
+        pollTask = Task { [weak self] in
+            var failures = 0
+            while !Task.isCancelled {
+                try? await Task.sleep(for: self?.pollInterval ?? .seconds(3))
+                guard let self, !Task.isCancelled, self.phase == .ready else { continue }
+                do {
+                    let states = try await client.fetchStates()
+                    if !Task.isCancelled { self.apply(states) }
+                    failures = 0
+                } catch {
+                    failures += 1
+                    if failures == 3 { self.fail(error) }   // a few misses in a row: Bridge not reachable
+                }
+            }
+        }
+    }
+
+    func stopPolling() {
+        pollTask?.cancel()
+        pollTask = nil
+    }
+
+    /// Applies polled states to every room that isn't settling after a change in the app.
+    func apply(_ states: LiveStates) {
+        let settling = Set(home.rooms.filter { isSettling($0) }.map(\.id))
+        let busyLights = Set(home.rooms.filter { settling.contains($0.id) }.flatMap(\.lightIDs))
+        var changed: Set<String> = []
+        for (id, light) in states.lights where !busyLights.contains(id) && home.lights[id] != light {
+            home.lights[id] = light
+            for room in home.rooms where room.lightIDs.contains(id) { changed.insert(room.id) }
+        }
+        for i in home.rooms.indices where !settling.contains(home.rooms[i].id) {
+            var room = home.rooms[i]
+            if let g = states.groups[room.groupedLightID] {
+                room.isOn = g.on
+                if let b = g.brightness { room.brightness = b }
+            }
+            if changed.contains(room.id) { HomeSnapshot.derive(&room, from: home.lights(in: room)) }
+            if room != home.rooms[i] {
+                home.rooms[i] = room
+                changed.insert(room.id)
+            }
+        }
+        if !changed.isEmpty {
+            store.lastKnownRooms = home.rooms
+            roomsChangedFromStream(changed)
+        }
     }
 
     func apply(_ events: [HueEvent]) {

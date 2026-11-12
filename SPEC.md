@@ -37,7 +37,7 @@ Every screen fits one watch screen without scrolling. The one exception is the g
 | Room | Hold a tile 0.5 s | Back arrow + room name; a top row with the on/off button, brightness % and a brightness bar; a Warmth slider; a Color wheel row; the default-color card |
 | Color wheel | Room › Color wheel | Back button and a pin button either side of the clock, the Crown brightness readout, the largest wheel that fits, and saved colors below it |
 | Settings | Grid › gear | Arrange rooms, Bridge. Back from Settings, Arrange or Bridge goes straight to the grid |
-| Arrange | Settings › Arrange rooms | The same icon grid; dragging reorders it, and nothing here changes lights |
+| Arrange | Settings › Arrange rooms | The same icon grid with every empty spot outlined; drag a room to any spot, and nothing here changes lights |
 | Bridge (pair) | First launch, or Settings › Bridge | IP field, the press-the-button instruction, Pair; then Paired and Show rooms |
 | Bridge not reachable | Any time the bridge doesn't answer | Message, Try again, Bridge settings |
 
@@ -46,17 +46,20 @@ Every screen fits one watch screen without scrolling. The one exception is the g
 - **Size:** shows every room on the bridge, with none hidden. Zones are not shown on the grid or in Arrange (they're still available to Siri and the widget). 1–4 tiles = two across (big tiles); 5–9 = three across; 10 or more = three across, scrolled by dragging. Never four across. Tiles are as large as the rows in use allow, so 5–6 rooms fill the screen's width.
 - **Tiles:** square, rounded. A lit tile fills with the room's current color, shows a dark icon and its brightness %. An off tile is dark gray and says Off.
 - **Icons:** chosen from each room's Hue archetype (sofa for living room, frying pan for kitchen (SF Symbols has no chef's hat), bed, monitor for office, door for front door, house for zones, and so on), with a bulb as the fallback. No name labels by default.
+- **Live updates backup:** while the app is open it also reads the lights' state every 3 seconds (quietly, logging only failures), so remotes, switches and the Hue app show up even if the event stream isn't delivering. The log notes the first update each event-stream connection receives.
 - **Live updates while tapping:** for two seconds after the app changes a room, its own state wins over live updates for that room (the bridge can echo older or in-between states); the newest update is applied once that time is up.
 - **Tap** a tile to toggle that room. **Hold** it 0.5 s to open its Room screen; a hold never also toggles.
 - **All off:** one command to the bridge's all-lights group (`bridge_home`'s `grouped_light`), not one per tile.
-- **Order:** the user's order from Arrange. New rooms from the bridge go to the end.
+- **Placement:** rooms sit where Arrange put them: any spot on the grid, including half-way between two columns, with gaps kept (nothing packs towards the top left). Until arranged, rooms fill the grid in order. New rooms from the bridge go to the first free spot.
 
 **Arrange drag rules** (to prevent the fighting seen in Closing Time)
 
-1. Hit-test the finger against the grid's fixed slot positions, never against the moving tiles.
-2. Change the target slot only when the finger is in the middle 60% of a slot.
-3. Wait about 150 ms on a new slot before moving the other tiles, then animate them aside.
-4. The dragged tile lifts (slightly larger, white outline) and its order is saved on release.
+1. Hit-test the finger against the grid's fixed slot positions, never against the moving tiles. Slots are half a tile apart across (three-across rows have five: the three columns and the two half-way spots) and a row apart down.
+2. Change the target slot only when the finger is in the middle 60% of a slot's cell.
+3. Wait about 150 ms on a new slot before moving the other tiles, then animate them aside: a room in the way slides to the nearest free spot (two rooms, for a half-way drop). The others are always placed from where they were when the drag began, so a room passed over goes back.
+4. The dragged tile lifts (slightly larger, white outline) and the arrangement is saved on release.
+
+Arrange uses the rows that fit the screen (two for one to four rooms, three otherwise), adding a row only when nothing else is free.
 
 Once a slot is the target, it stays the target while the finger is anywhere on that slot, so a held tile always makes room after ~150 ms. With more than nine rooms the Arrange tiles shrink so it never scrolls.
 

@@ -69,9 +69,20 @@ nonisolated final class HueBridgeClient: BridgeClient {
         return try await HomeSnapshot(rooms: rooms, zones: zones, groupedLights: groups, lights: lights, scenes: scenes)
     }
 
-    private func resources<T: Decodable & Sendable>(_ type: T.Type, _ name: String) async throws -> [T] {
-        let data = try await perform("GET", "/clip/v2/resource/\(name)")
+    private func resources<T: Decodable & Sendable>(_ type: T.Type, _ name: String, quiet: Bool = false) async throws -> [T] {
+        let data = try await perform("GET", "/clip/v2/resource/\(name)", quiet: quiet)
         return try decode(HueResponse<T>.self, data).data
+    }
+
+    /// Two quiet GETs (only errors are logged, so the log isn't flooded every few seconds).
+    func fetchStates() async throws -> LiveStates {
+        async let groupDTOs = resources(HueGroupedLightDTO.self, "grouped_light", quiet: true)
+        async let lightDTOs = resources(HueLightDTO.self, "light", quiet: true)
+        var groups: [String: LiveStates.Group] = [:]
+        for g in try await groupDTOs { if let on = g.on { groups[g.id] = .init(on: on.on, brightness: g.dimming?.brightness) } }
+        var lights: [String: LightState] = [:]
+        for l in try await lightDTOs { lights[l.id] = LightState(l) }
+        return LiveStates(groups: groups, lights: lights)
     }
 
     // MARK: Commands
@@ -162,20 +173,20 @@ nonisolated final class HueBridgeClient: BridgeClient {
         return request
     }
 
-    private func perform(_ method: String, _ path: String, body: Data? = nil, authenticated: Bool = true,
+    private func perform(_ method: String, _ path: String, body: Data? = nil, authenticated: Bool = true, quiet: Bool = false,
                          note: String? = nil) async throws -> Data {
         var request = try makeRequest(method, path, authenticated: authenticated)
         if let body {
             request.httpBody = body
             request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         }
-        log(.request, "\(method) \(path)\(note.map { " — \($0)" } ?? "")")
+        if !quiet { log(.request, "\(method) \(path)\(note.map { " — \($0)" } ?? "")") }
         let start = Date()
         do {
             let (data, response) = try await session.data(for: request)
             let code = (response as? HTTPURLResponse)?.statusCode ?? 0
             let ms = Int(Date().timeIntervalSince(start) * 1000)
-            log(.response, "\(code) \(method) \(path) (\(ms) ms)")
+            if !quiet || !(200..<300).contains(code) { log(.response, "\(code) \(method) \(path) (\(ms) ms)") }
             try check(code, data)
             return data
         } catch {

@@ -75,8 +75,16 @@ extension AppModel {
         store.lastKnownRooms = home.rooms
     }
 
-    /// Arrange: the grid order. Rooms the bridge adds later go to the end.
+    /// Arrange: where each room sits. The reading order is kept too (widget, Siri).
+    func saveArrangement(_ arrangement: GridArrangement) {
+        savedArrangement = arrangement
+        gridOrder = arrangement.readingOrder
+        log.add(.info, "Saved grid arrangement")
+    }
+
+    /// A plain order (VoiceOver moves, tests): rooms fill the grid in this order, no gaps.
     func saveOrder(_ ids: [String]) {
+        savedArrangement = nil
         gridOrder = ids
         log.add(.info, "Saved grid order")
     }

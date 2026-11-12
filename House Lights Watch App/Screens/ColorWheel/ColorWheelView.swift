@@ -53,16 +53,20 @@ struct ColorWheelView: View {
         knob ?? app.room(roomID).map { WheelMath.hueSaturation(of: $0.displayColor) } ?? (0, 0)
     }
 
-    /// Sits in the empty corner beside the round wheel.
+    /// Sits in the empty corner beside the round wheel: the Crown icon above the percentage,
+    /// stacked so the text stays clear of the wheel's edge.
     private var brightnessReadout: some View {
-        Label(app.room(roomID).map { $0.isOn ? "\($0.percent)%" : "Off" } ?? "",
-              systemImage: "digitalcrown.horizontal.arrow.clockwise")
-            .labelStyle(CompactLabelStyle())
-            .font(.footnote.weight(.semibold))
-            .monospacedDigit()
-            .foregroundStyle(Theme.secondaryText)
-            .allowsHitTesting(false)
-            .accessibilityIdentifier("wheelBrightness")
+        VStack(spacing: 1) {
+            Image(systemName: "digitalcrown.horizontal.arrow.clockwise")
+                .font(.system(size: 13, weight: .semibold))
+                .accessibilityHidden(true)
+            Text(app.room(roomID).map { $0.isOn ? "\($0.percent)%" : "Off" } ?? "")
+                .font(.footnote.weight(.semibold))
+                .monospacedDigit()
+                .accessibilityIdentifier("wheelBrightness")
+        }
+        .foregroundStyle(Theme.secondaryText)
+        .allowsHitTesting(false)
     }
 
     private func wheel(diameter d: CGFloat) -> some View {

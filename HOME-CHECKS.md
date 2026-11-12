@@ -26,7 +26,7 @@ request, response code and error is there (newest first).
 | Pairing | Enter the bridge IP, press its button, tap Pair within 30 s → "Paired, N rooms and M zones". | `POST /api` replies; error 101 means the button wasn't pressed |
 | Certificate | Pairing remembers the bridge's certificate. A later "certificate changed" means the bridge was replaced/reset: Pair again. | `Certificate changed` |
 | Grid | Every room and zone appears with a sensible icon; tap toggles; hold opens the room without toggling. | `PUT /clip/v2/resource/grouped_light/…` and its code |
-| Live updates | Change a light in the Hue app or at a switch: the tile updates within a second or two. Status stays connected while the app is open. | `GET /eventstream/clip/v2`, `Event stream dropped; reconnecting` |
+| Live updates | Change a light in the Hue app, with a remote or at a switch: the tile updates within a second (event stream) or at most 3 s (backup read). | `Event stream: first update received` — if it never appears, the stream isn't delivering on the watch and the 3 s backup is doing the work |
 | Crown on grid | Rooms that are on brighten/dim together; 100% stops; 0% turns off; tap brings it back at 70%. Tune the Crown speed if it feels too fast or slow. | |
 | Room screen | Crown brightness, power, Warmth and the color wheel all change the lights while you use them (at most once a second). | `Bridge says: …` after a grouped_light PUT |
 | Temporary colors | Change warmth → Back to default appears; it survives off/on; Back to default restores it; Set as default sticks. "House Lights – <room>" scenes appear in the Hue app. | `POST /clip/v2/resource/scene`, `recall` |

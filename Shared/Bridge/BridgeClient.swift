@@ -20,6 +20,27 @@ nonisolated protocol BridgeClient: Sendable {
 
     /// The live event stream. It ends (or throws) when the connection drops; callers reconnect.
     func events() -> AsyncThrowingStream<[HueEvent], any Error>
+
+    /// The lights' current state only (on, brightness, color), read quietly and often while
+    /// the app is open, as a backup to the event stream.
+    func fetchStates() async throws -> LiveStates
+}
+
+/// On/off and brightness per grouped light, and every light's state.
+nonisolated struct LiveStates: Sendable, Equatable {
+    struct Group: Sendable, Equatable { var on: Bool; var brightness: Double? }
+    var groups: [String: Group]
+    var lights: [String: LightState]
+}
+
+extension BridgeClient {
+    /// Default: read everything (mock and test bridges).
+    func fetchStates() async throws -> LiveStates {
+        let home = try await fetchHome()
+        var groups: [String: LiveStates.Group] = [:]
+        for room in home.rooms { groups[room.groupedLightID] = .init(on: room.isOn, brightness: room.brightness) }
+        return LiveStates(groups: groups, lights: home.lights)
+    }
 }
 
 nonisolated enum PairingAttempt: Sendable, Equatable {

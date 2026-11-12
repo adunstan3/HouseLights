@@ -8,7 +8,7 @@ nonisolated struct SharedStore: @unchecked Sendable {
     init(defaults: UserDefaults = AppGroup.defaults) { self.defaults = defaults }
 
     private enum Key: String {
-        case bridgeIP, gridOrder, temporaryRooms, pendingDefaults, zeroDimmed, lastKnownRooms
+        case bridgeIP, gridOrder, temporaryRooms, pendingDefaults, zeroDimmed, lastKnownRooms, gridArrangement
     }
 
     var bridgeIP: String? {
@@ -20,6 +20,12 @@ nonisolated struct SharedStore: @unchecked Sendable {
     var gridOrder: [String] {
         get { defaults.stringArray(forKey: Key.gridOrder.rawValue) ?? [] }
         nonmutating set { defaults.set(newValue, forKey: Key.gridOrder.rawValue) }
+    }
+
+    /// Where each room sits on the grid (Arrange), as JSON; nil until arranged.
+    var gridArrangement: GridArrangement? {
+        get { decode(Key.gridArrangement) }
+        nonmutating set { encode(newValue, Key.gridArrangement) }
     }
 
     /// Rooms showing a temporary color, with the color the app set.

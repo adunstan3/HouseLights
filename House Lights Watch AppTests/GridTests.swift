@@ -169,3 +169,56 @@ struct ReloadRaceTests {
         #expect(app.room("mock-room-0")?.isOn == false)
     }
 }
+
+/// Staying in step with remotes, switches and the Hue app (reported from the real watch).
+@MainActor
+struct OutsideChangeSyncTests {
+    @Test func oneOddItemDoesNotSinkTheBatch() throws {
+        let json = #"[{"type":"update","id":"e","data":[{"id":"b1","type":"button","button":{"last_event":"short_release"}},{"id":"x","type":"light","dimming":"weird"},{"id":"gl-1","type":"grouped_light","on":{"on":false}}]}]"#
+        let events = try EventStreamParser.decode(json)
+        #expect(events.first?.data.count == 3)                          // nothing dropped
+        #expect(events.first?.data.last?.on == HueOn(on: false))
+        #expect(events.first?.data[1].dimming == nil)                   // the odd field is skipped alone
+    }
+
+    @Test func pollingCatchesARemoteWithoutTheEventStream() async throws {
+        let (app, mock) = ConnectionTests.makeApp(paired: true)
+        await app.start()                                               // no event stream running
+        app.pollInterval = .milliseconds(100)
+        app.startPolling()
+        await mock.simulateOutsideColor(roomID: "mock-room-0", color: .temperature(mirek: 366))   // remote: back to white
+        #expect(await eventually { app.room("mock-room-0")?.color == .temperature(mirek: 366) })
+        let before = app.room("mock-room-0")!.isOn
+        await mock.simulateOutsideChange()                              // some room switched at the wall
+        let home = await mock.currentHome
+        #expect(await eventually {
+            home.rooms.filter { $0.kind == .room }.allSatisfy { app.room($0.id)?.isOn == $0.isOn }
+        })
+        _ = before
+        app.stopPolling()
+    }
+
+    @Test func pollingDropsATemporaryColorTheRemoteReplaced() async throws {
+        let (app, mock) = ConnectionTests.makeApp(paired: true)
+        await app.start()
+        app.setColor(XY(x: 0.17, y: 0.1), roomID: "mock-room-0")        // blue in the app
+        #expect(app.isTemporary("mock-room-0"))
+        #expect(await eventually {                                       // the bridge has it
+            if case .xy = await mock.currentHome.lights["mock-light-0-a"]?.color { return true } else { return false }
+        })
+        app.lastLocalChange["mock-room-0"] = .distantPast
+        app.pollInterval = .milliseconds(100)
+        app.startPolling()
+        await mock.simulateOutsideColor(roomID: "mock-room-0", color: .temperature(mirek: 366))
+        #expect(await eventually { !app.isTemporary("mock-room-0") })   // the app shows what the lights show
+        app.stopPolling()
+    }
+
+    @Test func pollingLeavesAJustTappedRoomAlone() async throws {
+        let (app, _) = ConnectionTests.makeApp(paired: true)
+        await app.start()
+        app.toggle("mock-room-0")                                       // off, settling
+        app.apply(LiveStates(groups: ["mock-group-0": .init(on: true, brightness: 70)], lights: [:]))
+        #expect(app.room("mock-room-0")?.isOn == false)
+    }
+}

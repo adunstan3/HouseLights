@@ -67,7 +67,9 @@ fallback. Zones aren't shown.
   brightness.
 - **All off** (left of the clock) turns every light off with one command; the gear (right
   of the clock) opens Settings.
-- **Live:** changes made in the Hue app, with a switch or a remote show up within a second.
+- **Live:** changes made in the Hue app, with a switch or a remote show up within a second
+  through the bridge's event stream, and within 3 seconds at most through a quiet backup read
+  while the app is open.
 
 ### Room screen
 
@@ -88,8 +90,8 @@ that's off doesn't turn it on; the new color shows when it's next switched on.
   <img src="docs/screenshots/swatches.png" width="180" alt="Saved colors below the wheel">
 </p>
 
-The largest wheel that fits, with the brightness readout in the corner (the Crown still
-sets brightness here). The color is sent when your finger lifts, converted to Hue's CIE xy
+The largest wheel that fits, with the Crown icon and brightness stacked in the corner (the
+Crown still sets brightness here). The color is sent when your finger lifts, converted to Hue's CIE xy
 coordinates and fitted to the colors the room's bulbs can show.
 
 The **pin** button right of the clock saves the current color. Saved colors appear below
@@ -111,15 +113,18 @@ outside the app (the Hue app, a switch, a power cut) drops the temporary label.
 
 <p>
   <img src="docs/screenshots/settings.png" width="180" alt="Settings">
-  <img src="docs/screenshots/arrange.png" width="180" alt="Arrange">
+  <img src="docs/screenshots/arrange.png" width="180" alt="Arrange with empty spots outlined">
+  <img src="docs/screenshots/grid-free.png" width="180" alt="Grid with rooms spread out and half-way spots">
 </p>
 
-Settings › Arrange rooms shows the same grid in its current state. Drag a tile to move it;
-nothing here changes the lights. The drag follows four rules so tiles never fight: the
-finger is checked against fixed slot positions (never the moving tiles), a slot only
-becomes the target from its middle 60%, the other tiles move aside after about 150 ms on a
-new slot, and the order is saved on release. New rooms from the bridge go to the end. Back
-from Settings or Arrange goes straight to the grid.
+Settings › Arrange rooms shows the same grid in its current state, with every empty spot
+outlined. Drag a room to **any spot** — including half-way between two columns — and the
+grid keeps it there, gaps and all. A room in the way slides to the nearest free spot.
+Nothing here changes the lights. The drag follows four rules so tiles never fight: the
+finger is checked against fixed slot positions (never the moving tiles), a spot only
+becomes the target from its middle 60%, the others move aside after about 150 ms on a new
+spot (and go back if you move on), and the layout is saved on release. New rooms from the
+bridge go to the first free spot. Back from Settings or Arrange goes straight to the grid.
 
 ### Pairing with the bridge
 
@@ -216,7 +221,8 @@ the one you run from Xcode:
 
 Debug launch arguments (simulator / debug builds):
 `-mockTiles 12`, `-unpaired YES`, `-mockOffline YES`, `-mockTemporary YES`,
-`-mockOutsideChanges YES`, `-realBridge YES`, `-openScreen settings|bridge|log|arrange|room|wheel`,
+`-mockOutsideChanges YES`, `-mockSwatches YES`, `-scrollSwatches YES`, `-mockFreeLayout YES`,
+`-realBridge YES`, `-openScreen settings|bridge|log|arrange|room|wheel`,
 `-openRoom "Office"`.
 
 ### Releasing through TestFlight
@@ -227,14 +233,14 @@ using the Apple ID signed in to Xcode.
 
 ## Tests
 
-- **104 unit tests** (Swift Testing, about 3 seconds): color maths and gamut clamping,
+- **112 unit tests** (Swift Testing, about 3 seconds): color maths and gamut clamping,
   command merging and the once-a-second sender, the event-stream parser, building the home
   from bridge-shaped JSON, pairing and certificate pinning, grid sizes, the Crown rules,
   the four Arrange drag rules, defaults and temporary colors, live sending while dragging,
   the settle window and reloads racing a tap, saved colors, Siri actions and the widget's
   rooms. Widget and Siri snapshots render
   to PNGs with `TEST_RUNNER_SNAPSHOT_DIR=… scripts/test.sh`.
-- **9 UI tests** (XCTest, about 2 minutes): tap toggles, hold opens without toggling, the
+- **10 UI tests** (XCTest, about 2 minutes): tap toggles, hold opens without toggling, the
   Crown on every screen (and never scrolling the big grid), a real Arrange drag, the
   temporary buttons appearing at once, pinning, scrolling to and removing a saved color, and
   Back going straight to the grid.

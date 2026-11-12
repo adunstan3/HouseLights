@@ -9,10 +9,11 @@ nonisolated struct GridLayout: Equatable, Sendable {
     var spacing: CGFloat
     var scrolls: Bool
 
-    static func make(count: Int, width: CGFloat, height: CGFloat, spacing: CGFloat = 5) -> GridLayout {
+    /// `rows` is how many rows the arrangement uses (defaults to packing the rooms).
+    static func make(count: Int, rows usedRows: Int? = nil, width: CGFloat, height: CGFloat, spacing: CGFloat = 5) -> GridLayout {
         let columns = count <= 4 ? 2 : 3
         let scrolls = count >= 10
-        let rows = max(Int((Double(max(count, 1)) / Double(columns)).rounded(.up)), 1)
+        let rows = max(usedRows ?? Int((Double(max(count, 1)) / Double(columns)).rounded(.up)), 1)
         let byWidth = (width - spacing * CGFloat(columns - 1)) / CGFloat(columns)
         let byHeight = (height - spacing * CGFloat(rows - 1)) / CGFloat(rows)
         let tile = scrolls ? byWidth : min(byWidth, byHeight)
@@ -27,4 +28,28 @@ nonisolated struct GridLayout: Equatable, Sendable {
     }
 
     func frame(of index: Int) -> CGRect { CGRect(origin: origin(of: index), size: CGSize(width: tile, height: tile)) }
+
+    // MARK: Free placement (GridArrangement)
+
+    /// Half a tile plus half a gap: the step between a column and a half-way position.
+    var halfStep: CGFloat { (tile + spacing) / 2 }
+    var rowStep: CGFloat { tile + spacing }
+
+    func frame(of slot: Slot) -> CGRect {
+        CGRect(x: CGFloat(slot.half) * halfStep, y: CGFloat(slot.row) * rowStep, width: tile, height: tile)
+    }
+
+    func height(rows: Int) -> CGFloat { CGFloat(max(rows, 1)) * rowStep - spacing }
+
+    /// The slot whose centre is nearest `p` (clamped to the grid), and whether `p` is inside
+    /// the middle 60% of that slot's cell (half a tile wide, a row high).
+    func slot(near p: CGPoint, rows: Int) -> (slot: Slot, inMiddle: Bool) {
+        let maxHalf = 2 * (columns - 1)
+        let fx = (p.x - tile / 2) / halfStep
+        let fy = (p.y - tile / 2) / rowStep
+        let half = min(max(Int(fx.rounded()), 0), maxHalf)
+        let row = min(max(Int(fy.rounded()), 0), max(rows - 1, 0))
+        let inMiddle = abs(fx - CGFloat(half)) <= 0.3 && abs(fy - CGFloat(row)) <= 0.3
+        return (Slot(row: row, half: half), inMiddle)
+    }
 }
