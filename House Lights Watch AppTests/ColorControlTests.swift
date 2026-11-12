@@ -50,14 +50,23 @@ struct ColorControlTests {
                 #expect(await eventually { await mock.currentHome.lights["mock-light-0-a"]?.color == .temperature(mirek: 454) })
     }
 
-    @Test func colorTurnsAnOffRoomOn() async throws {
+    /// The reported desync: changing an off room's color must not turn it on, in the app or on the bridge.
+    @Test func colorOnAnOffRoomKeepsItOff() async throws {
         let (app, mock) = ConnectionTests.makeApp(paired: true)
         await app.start()
         let xy = WheelMath.xy(hue: 0.6, saturation: 1, gamut: .c)
         app.setColor(xy, roomID: "mock-room-4")                       // Front door, off
-        #expect(app.room("mock-room-4")?.isOn == true)
+        #expect(app.room("mock-room-4")?.isOn == false)
         #expect(app.room("mock-room-4")?.color == .xy(xy))
-                #expect(await eventually { await mock.currentHome.room("mock-room-4")?.isOn == true })
+        #expect(await eventually { await mock.currentHome.lights["mock-light-4-a"]?.color == .xy(Gamut.c.clamp(xy)) })
+        #expect(await mock.currentHome.room("mock-room-4")?.isOn == false)
+        try await Task.sleep(for: .milliseconds(1100))                 // the once-a-second limit
+        app.setWarmth(kelvin: 3000, roomID: "mock-room-4")
+        #expect(app.room("mock-room-4")?.isOn == false)
+        try await Task.sleep(for: .milliseconds(1100))
+        app.toggle("mock-room-4")                                      // turning it on shows the new color
+        #expect(await eventually(timeout: .seconds(3)) { await mock.currentHome.room("mock-room-4")?.isOn == true })
+        #expect(await mock.currentHome.lights["mock-light-4-a"]?.color == .temperature(mirek: 333))
     }
 
     @Test func roomScreenBrightnessToZeroTurnsOff() async {
@@ -109,5 +118,40 @@ struct LiveSendingTests {
         app.setColor(XY(x: 0.6, y: 0.35), roomID: "mock-room-3")
         #expect(app.isTemporary("mock-room-3"))                    // observed property, no reload needed
         #expect(app.temporaryRooms["mock-room-3"] != nil)
+    }
+}
+
+@MainActor
+struct SwatchTests {
+    @Test func pinningAddsNewestFirstAndSkipsNearDuplicates() async {
+        let (app, _) = ConnectionTests.makeApp(paired: true)
+        #expect(app.pinSwatch(hue: 0.1, saturation: 0.8))
+        #expect(app.pinSwatch(hue: 0.6, saturation: 0.5))
+        #expect(!app.pinSwatch(hue: 0.605, saturation: 0.52))           // a finger's width away: same color
+        #expect(app.savedSwatches.map(\.hue) == [0.6, 0.1])
+        #expect(app.pinSwatch(hue: 0.995, saturation: 1))
+        #expect(!app.pinSwatch(hue: 0.002, saturation: 1))              // hue wraps around at red
+    }
+
+    @Test func swatchesAreSavedForEveryRoomAndCanBeRemoved() async {
+        let (app, _) = ConnectionTests.makeApp(paired: true)
+        app.pinSwatch(hue: 0.3, saturation: 0.9)
+        #expect(app.store.savedSwatches.count == 1)                     // persisted, not tied to a room
+        let reopened = AppModel(environment: app.environment, store: app.store, log: BridgeLog(fileURL: nil))
+        #expect(reopened.savedSwatches.map(\.hue) == [0.3])
+        app.removeSwatch(app.savedSwatches[0].id)
+        #expect(app.store.savedSwatches.isEmpty)
+    }
+}
+
+struct CrownStepTests {
+    @Test func roomCrownMovesInFivesAndSnaps() {
+        #expect(BrightnessCrown.step(from: 70, by: 1) == 75)
+        #expect(BrightnessCrown.step(from: 72, by: 1) == 75)
+        #expect(BrightnessCrown.step(from: 72, by: -1) == 70)
+        #expect(BrightnessCrown.step(from: 70, by: -2) == 60)
+        #expect(BrightnessCrown.step(from: 98, by: 1) == 100)
+        #expect(BrightnessCrown.step(from: 3, by: -1) == 0)       // off
+        #expect(BrightnessCrown.step(from: 0, by: 1) == 5)        // on from off
     }
 }

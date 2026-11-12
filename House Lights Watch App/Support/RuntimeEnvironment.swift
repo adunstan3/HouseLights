@@ -9,6 +9,8 @@ import Foundation
 /// - `-mockOutsideChanges YES` the mock flips a room every 15 s, like a wall switch
 /// - `-mockTemporary YES`  the living room starts with a temporary color
 /// - `-pillSeconds 10`     keep the Crown pill up longer (UI tests)
+/// - `-mockSwatches YES`   start with a few saved colors on the Color wheel screen
+/// - `-scrollSwatches YES` open the Color wheel scrolled down to the saved colors
 /// - `-realBridge YES`     use the real bridge client even in the simulator
 /// - `-openScreen name`    settings, bridge, log, arrange, room, wheel
 /// - `-openRoom "Name"`    which room `room`/`wheel` open (default the first)

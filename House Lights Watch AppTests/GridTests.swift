@@ -148,3 +148,24 @@ struct SettleTests {
         #expect(app.room("mock-room-2")?.isOn == true)
     }
 }
+
+@MainActor
+struct ReloadRaceTests {
+    /// The reported bug: reopen the app, tap a lit tile before the reload finishes — the light
+    /// went off but the reload's older reply put the tile back on.
+    @Test func tapDuringReloadIsNotUndoneByTheReply() async throws {
+        let mock = MockBridgeClient(latency: .milliseconds(300))
+        let store = SharedStore(defaults: UserDefaults(suiteName: "test-\(UUID())")!)
+        let app = AppModel(environment: .mock(mock, paired: true, store: store), store: store, log: BridgeLog(fileURL: nil))
+        await app.start()
+        #expect(app.room("mock-room-0")?.isOn == true)
+        let reload = Task { await app.reload() }                    // coming back to the app
+        try await Task.sleep(for: .milliseconds(50))                 // the read is in flight
+        app.toggle("mock-room-0")                                     // tap: off
+        await reload.value
+        #expect(app.room("mock-room-0")?.isOn == false)               // the old reply didn't win
+        #expect(await eventually(timeout: .seconds(4)) { await mock.currentHome.room("mock-room-0")?.isOn == false })
+        try await Task.sleep(for: .seconds(3.2))                      // the follow-up check
+        #expect(app.room("mock-room-0")?.isOn == false)
+    }
+}

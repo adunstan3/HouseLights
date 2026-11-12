@@ -76,19 +76,25 @@ fallback. Zones aren't shown.
   <img src="docs/screenshots/room-office.png" width="180" alt="Room screen for a room showing a color">
 </p>
 
-The power button switches the room, the Crown sets its brightness one percent per click,
-and **Warmth** slides from 2200 K to 6500 K. Changes reach the lights while you turn or
-drag (at most once a second per room, which is what the bridge allows).
+The power button switches the room. Drag the brightness bar, or turn the Crown in 5% steps;
+**Warmth** slides from 2200 K to 6500 K. Changes reach the lights while you turn or drag (at
+most once a second per room, which is what the bridge allows). Changing the color of a room
+that's off doesn't turn it on; the new color shows when it's next switched on.
 
 ### Color wheel
 
 <p>
   <img src="docs/screenshots/color-wheel.png" width="180" alt="Color wheel">
+  <img src="docs/screenshots/swatches.png" width="180" alt="Saved colors below the wheel">
 </p>
 
-The largest wheel that fits, with the brightness readout next to the title (the Crown
-still sets brightness here). The color is sent when your finger lifts, converted to Hue's
-CIE xy coordinates and fitted to the colors the room's bulbs can show.
+The largest wheel that fits, with the brightness readout in the corner (the Crown still
+sets brightness here). The color is sent when your finger lifts, converted to Hue's CIE xy
+coordinates and fitted to the colors the room's bulbs can show.
+
+The **pin** button right of the clock saves the current color. Saved colors appear below
+the wheel, four across; drag the page to scroll to them. Tap a swatch to use it in this
+room, hold it to remove it. They're shared by every room.
 
 ### Defaults and temporary colors
 
@@ -221,15 +227,17 @@ using the Apple ID signed in to Xcode.
 
 ## Tests
 
-- **100 unit tests** (Swift Testing, about 3 seconds): color maths and gamut clamping,
+- **104 unit tests** (Swift Testing, about 3 seconds): color maths and gamut clamping,
   command merging and the once-a-second sender, the event-stream parser, building the home
   from bridge-shaped JSON, pairing and certificate pinning, grid sizes, the Crown rules,
   the four Arrange drag rules, defaults and temporary colors, live sending while dragging,
-  the settle window, Siri actions and the widget's rooms. Widget and Siri snapshots render
+  the settle window and reloads racing a tap, saved colors, Siri actions and the widget's
+  rooms. Widget and Siri snapshots render
   to PNGs with `TEST_RUNNER_SNAPSHOT_DIR=… scripts/test.sh`.
-- **8 UI tests** (XCTest, about 2 minutes): tap toggles, hold opens without toggling, the
+- **9 UI tests** (XCTest, about 2 minutes): tap toggles, hold opens without toggling, the
   Crown on every screen (and never scrolling the big grid), a real Arrange drag, the
-  temporary buttons appearing at once, and Back going straight to the grid.
+  temporary buttons appearing at once, pinning, scrolling to and removing a saved color, and
+  Back going straight to the grid.
 
 ## Project layout
 

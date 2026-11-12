@@ -49,3 +49,7 @@ request, response code and error is there (newest first).
   the app reconnects when it becomes active again and reloads to catch up.
 - **Bulbs that are off ignore color changes**, so Back to default on an off room is applied
   the next time House Lights turns it on (app, widget or Siri), as agreed.
+- **Changing the color of a room that's off** sends the color without "on". Hue says current
+  bulbs keep it and show it when next switched on; older firmware may ignore it or the bridge
+  may refuse it ("The bridge didn't accept that change" and a `Bridge says:` line in the log).
+  Check: turn a room off, change its warmth, then turn it on.

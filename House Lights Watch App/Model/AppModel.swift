@@ -53,6 +53,7 @@ final class AppModel {
         gridOrder = store.gridOrder
         temporaryRooms = store.temporaryRooms
         pendingDefaults = store.pendingDefaults
+        savedSwatches = store.savedSwatches
     }
 
     /// The user's grid order (room ids), kept here so the grid redraws when Arrange changes it.
@@ -62,6 +63,8 @@ final class AppModel {
     var temporaryRooms: [String: LightColor] = [:] { didSet { store.temporaryRooms = temporaryRooms } }
     /// Rooms whose Back to default was tapped while off.
     var pendingDefaults: Set<String> = [] { didSet { store.pendingDefaults = pendingDefaults } }
+    /// Colors pinned on the Color wheel screen (newest first), shared by every room.
+    var savedSwatches: [SavedSwatch] = [] { didSet { store.savedSwatches = savedSwatches } }
 
     /// The grid's tiles: Hue rooms (not zones) in the user's order.
     var rooms: [Room] { GridOrder.apply(gridOrder, to: home.rooms.filter { $0.kind == .room }) }
@@ -85,8 +88,23 @@ final class AppModel {
     func reload() async {
         guard let client else { await start(); return }
         if home.rooms.isEmpty || phase != .ready { phase = .loading }
+        let started = Date()
         do {
-            let fresh = try await client.fetchHome()
+            var fresh = try await client.fetchHome()
+            // A room changed in the app while this read was in flight keeps its new state: the
+            // reply was taken before the change and would put the tile back (tap a light right
+            // after reopening the app, and the tile stayed lit while the light went off).
+            // Check again once things settle, so the tile ends up matching the bridge.
+            let changed = Set(lastLocalChange.filter { $0.value >= started }.keys)
+            if !changed.isEmpty {
+                for i in fresh.rooms.indices {
+                    guard changed.contains(fresh.rooms[i].id), let mine = home.room(fresh.rooms[i].id) else { continue }
+                    fresh.rooms[i].isOn = mine.isOn
+                    fresh.rooms[i].brightness = mine.brightness
+                    fresh.rooms[i].color = mine.color
+                }
+                scheduleReload(after: .seconds(Self.settleTime + 0.5))
+            }
             home = fresh
             store.lastKnownRooms = fresh.rooms
             phase = .ready
@@ -245,10 +263,10 @@ final class AppModel {
         checkTemporaryColors(quiet, turnedOnOutside: lit)
     }
 
-    private func scheduleReload() {
+    private func scheduleReload(after delay: Duration = .seconds(1)) {
         reloadTask?.cancel()
         reloadTask = Task { [weak self] in
-            try? await Task.sleep(for: .seconds(1))
+            try? await Task.sleep(for: delay)
             guard !Task.isCancelled else { return }
             await self?.reload()
         }

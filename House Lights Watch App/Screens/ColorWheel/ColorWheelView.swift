@@ -1,47 +1,74 @@
 import SwiftUI
+import WatchKit
 
-/// The Color wheel screen: back arrow, the Crown brightness readout, and the largest wheel
-/// that fits. The color is sent when the finger lifts, not on every movement.
+/// The Color wheel screen: the largest wheel that fits, the Crown brightness readout, and a
+/// pin button (right of the clock) that saves the current color. Saved colors sit below the
+/// wheel, four across; drag the page to scroll to them. Tap a swatch to use it, hold it to
+/// remove it. The color is sent when the finger lifts, not on every movement.
 struct ColorWheelView: View {
     let roomID: String
     @Environment(AppModel.self) private var app
-    @Environment(Router.self) private var router
     @State private var knob: (hue: Double, saturation: Double)?
+    @State private var justPinned: SavedSwatch.ID?
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            HStack {
-                ScreenHeader(title: "Color") { router.pop() }
-                    .padding(.trailing, -Metrics.clockClearance)
-                Spacer(minLength: 4)
-                Label(app.room(roomID).map { $0.isOn ? "\($0.percent)%" : "Off" } ?? "",
-                      systemImage: "digitalcrown.horizontal.arrow.clockwise")
-                    .labelStyle(CompactLabelStyle())
-                    .font(.footnote.weight(.semibold))
-                    .monospacedDigit()
-                    .foregroundStyle(Theme.secondaryText)
-                    .accessibilityIdentifier("wheelBrightness")
-            }
-            .padding(.trailing, Metrics.clockClearance)
-            GeometryReader { geo in
-                let d = min(geo.size.width, geo.size.height)
-                wheel(diameter: d)
-                    .frame(width: geo.size.width, height: geo.size.height)
+        GeometryReader { geo in
+            ScrollViewReader { scroller in
+                ScrollView(.vertical, showsIndicators: false) {
+                    VStack(spacing: 12) {
+                        let d = min(geo.size.width, geo.size.height) - 4
+                        wheel(diameter: d)
+                            .frame(width: geo.size.width, height: d)
+                            .overlay(alignment: .topLeading) { brightnessReadout }
+                        SwatchGrid(swatches: app.savedSwatches, selected: current, highlighted: justPinned,
+                                   onTap: use, onRemove: remove)
+                            .id("swatches")
+                    }
+                    .padding(.bottom, 24)
+                }
+                .onAppear {
+                    if RuntimeEnvironment.flag("scrollSwatches") { scroller.scrollTo("swatches", anchor: .top) }
+                }
             }
         }
-        .padding(.horizontal, Metrics.sideMargin)
-        .padding(.top, Metrics.headerTop)
-        .padding(.bottom, 8)
+        .padding(.horizontal, 6)
         .background(Theme.background)
-        .ignoresSafeArea(edges: [.top, .bottom])
-        .toolbar(.hidden, for: .navigationBar)
+        .ignoresSafeArea(edges: .bottom)
+        .navigationTitle("Color")
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                Button(action: pin) {
+                    Image(systemName: "pin.fill").font(.system(size: 14, weight: .bold)).foregroundStyle(.white)
+                }
+                .tint(Theme.secondaryButton)
+                .accessibilityLabel("Save this color")
+                .accessibilityIdentifier("pinColor")
+            }
+        }
         .brightnessCrown(roomID: roomID)
+    }
+
+    /// The knob's color: where the finger last left it, or the room's current color.
+    private var current: (hue: Double, saturation: Double) {
+        knob ?? app.room(roomID).map { WheelMath.hueSaturation(of: $0.displayColor) } ?? (0, 0)
+    }
+
+    /// Sits in the empty corner beside the round wheel.
+    private var brightnessReadout: some View {
+        Label(app.room(roomID).map { $0.isOn ? "\($0.percent)%" : "Off" } ?? "",
+              systemImage: "digitalcrown.horizontal.arrow.clockwise")
+            .labelStyle(CompactLabelStyle())
+            .font(.footnote.weight(.semibold))
+            .monospacedDigit()
+            .foregroundStyle(Theme.secondaryText)
+            .allowsHitTesting(false)
+            .accessibilityIdentifier("wheelBrightness")
     }
 
     private func wheel(diameter d: CGFloat) -> some View {
         let r = d / 2
         let center = CGPoint(x: r, y: r)
-        let current = knob ?? app.room(roomID).map { WheelMath.hueSaturation(of: $0.displayColor) } ?? (0, 0)
+        let current = self.current
         let knobPoint = WheelMath.point(hue: current.hue, saturation: current.saturation, center: center, radius: r)
         let knobColor = Color(ColorMath.rgb(hue: current.hue, saturation: current.saturation))
         return ZStack {
@@ -56,6 +83,7 @@ struct ColorWheelView: View {
         }
         .frame(width: d, height: d)
         .contentShape(Circle())
+        // Dragging on the wheel picks a color; dragging anywhere else scrolls the page.
         .gesture(
             DragGesture(minimumDistance: 0)
                 .onChanged { g in knob = WheelMath.hueSaturation(at: g.location, center: center, radius: r) }
@@ -68,6 +96,24 @@ struct ColorWheelView: View {
         .accessibilityElement()
         .accessibilityLabel("Color wheel")
         .accessibilityIdentifier("wheel")
+    }
+
+    private func pin() {
+        let hs = current
+        let added = app.pinSwatch(hue: hs.hue, saturation: hs.saturation)
+        WKInterfaceDevice.current().play(added ? .success : .click)
+        justPinned = app.savedSwatches.first { $0.matches(hue: hs.hue, saturation: hs.saturation) }?.id
+        app.log.add(.info, added ? "Saved a color" : "That color is already saved")
+    }
+
+    private func use(_ swatch: SavedSwatch) {
+        knob = (swatch.hue, swatch.saturation)
+        send((swatch.hue, swatch.saturation))
+    }
+
+    private func remove(_ swatch: SavedSwatch) {
+        WKInterfaceDevice.current().play(.directionDown)
+        withAnimation { app.removeSwatch(swatch.id) }
     }
 
     private func send(_ hs: (hue: Double, saturation: Double)) {

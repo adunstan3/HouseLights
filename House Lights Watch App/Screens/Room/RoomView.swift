@@ -12,7 +12,8 @@ struct RoomView: View {
         if let room = app.room(roomID) {
             Screen(title: room.name) {
                 VStack(alignment: .leading, spacing: 6) {
-                    RoomTopRow(room: room) { app.toggle(roomID) }
+                    RoomTopRow(room: room, onPower: { app.toggle(roomID) },
+                               onBrightness: { app.setBrightness($0, roomID: roomID) })
                     WarmthSlider(room: room) { app.setWarmth(kelvin: $0, roomID: roomID) }
                     ColorWheelRow(enabled: room.supportsColor) { router.push(.colorWheel(roomID)) }
                     TemporaryColorCard(roomID: roomID)
@@ -27,10 +28,11 @@ struct RoomView: View {
     }
 }
 
-/// Power button, brightness %, "Crown" hint and the brightness bar.
+/// Power button, brightness %, and the brightness slider (drag it, or turn the Crown).
 struct RoomTopRow: View {
     let room: Room
     let onPower: () -> Void
+    let onBrightness: (Double) -> Void
 
     var body: some View {
         HStack(spacing: 8) {
@@ -48,36 +50,57 @@ struct RoomTopRow: View {
                 .accessibilityIdentifier("power")
                 .accessibilityAction { onPower() }
             VStack(alignment: .leading, spacing: 4) {
-                HStack(alignment: .firstTextBaseline) {
-                    Text(room.isOn ? "\(room.percent)%" : "Off")
-                        .font(.system(size: 24, weight: .bold))
-                        .monospacedDigit()
-                        .accessibilityIdentifier("brightness")
-                    Spacer(minLength: 2)
-                    Label("Crown", systemImage: "digitalcrown.horizontal.arrow.clockwise")
-                        .labelStyle(CompactLabelStyle())
-                        .font(.footnote.weight(.semibold))
-                        .foregroundStyle(Theme.secondaryText)
-                }
-                BrightnessBar(fraction: room.isOn ? room.brightness / 100 : 0, color: room.displayColor.tileColor)
+                Text(room.isOn ? "\(room.percent)%" : "Off")
+                    .font(.system(size: 24, weight: .bold))
+                    .monospacedDigit()
+                    .accessibilityIdentifier("brightness")
+                BrightnessSlider(value: room.isOn ? room.brightness : 0, color: room.displayColor.tileColor,
+                                 onChange: onBrightness)
             }
         }
     }
 }
 
-struct BrightnessBar: View {
-    let fraction: Double
+/// The brightness bar, which also works as a slider: drag along it to set brightness
+/// (1% steps; all the way left turns the room off).
+struct BrightnessSlider: View {
+    let value: Double
     let color: Color
+    let onChange: (Double) -> Void
+    @State private var dragValue: Double?
 
     var body: some View {
         GeometryReader { geo in
+            let width = geo.size.width
+            let shown = dragValue ?? value
             ZStack(alignment: .leading) {
-                Capsule().fill(Theme.secondaryButton)
-                Capsule().fill(color).frame(width: max(geo.size.width * fraction, fraction > 0 ? 6 : 0))
+                Capsule().fill(Theme.secondaryButton).frame(height: 8)
+                Capsule().fill(color).frame(width: max((width - 16) * shown / 100 + 8, shown > 0 ? 8 : 0), height: 8)
+                Circle()
+                    .fill(.white)
+                    .overlay(Circle().strokeBorder(.black.opacity(0.25), lineWidth: 1))
+                    .frame(width: 16, height: 16)
+                    .offset(x: (width - 16) * shown / 100)
             }
+            .frame(height: 22)
+            .contentShape(Rectangle())
+            .gesture(
+                DragGesture(minimumDistance: 0)
+                    .onChanged { g in
+                        let v = (min(max((g.location.x - 8) / max(width - 16, 1), 0), 1) * 100).rounded()
+                        if v != dragValue { dragValue = v; onChange(v) }
+                    }
+                    .onEnded { _ in dragValue = nil }
+            )
         }
-        .frame(height: 6)
-        .accessibilityHidden(true)
+        .frame(height: 22)
+        .accessibilityElement()
+        .accessibilityLabel("Brightness")
+        .accessibilityValue("\(Int(value)) percent")
+        .accessibilityIdentifier("brightnessSlider")
+        .accessibilityAdjustableAction { direction in
+            onChange(BrightnessCrown.step(from: value, by: direction == .increment ? 1 : -1))
+        }
     }
 }
 

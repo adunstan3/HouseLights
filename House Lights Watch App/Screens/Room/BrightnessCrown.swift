@@ -1,7 +1,8 @@
 import SwiftUI
 
 /// Binds the Digital Crown to one room's brightness (Room and Color wheel screens):
-/// each detent is 1%. Turning to 0 turns the room off; turning up from off turns it on.
+/// each detent moves 5%, snapping to multiples of 5. Turning to 0 turns the room off;
+/// turning up from off turns it on.
 ///
 /// The Crown is unbounded and continuous, like the grid's, and we apply the change in each
 /// turn ourselves. A bounded 0–100 Crown makes watchOS draw its green position indicator
@@ -26,9 +27,15 @@ struct BrightnessCrown: ViewModifier {
                 let steps = Int((value - applied).rounded(.towardZero))
                 guard steps != 0 else { return }
                 applied += Double(steps)
-                let target = min(max(current + Double(steps), 0), 100)
+                let target = Self.step(from: current, by: steps)
                 if target != current { app.setBrightness(target, roomID: roomID) }
             }
+    }
+
+    /// 72% up one detent is 75%, down one is 70%.
+    nonisolated static func step(from current: Double, by steps: Int) -> Double {
+        let base = steps > 0 ? (current / 5).rounded(.down) : (current / 5).rounded(.up)
+        return min(max((base + Double(steps)) * 5, 0), 100)
     }
 
     /// The brightness the Crown starts from: 0 when the room is off.

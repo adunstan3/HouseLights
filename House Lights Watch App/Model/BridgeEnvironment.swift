@@ -48,6 +48,10 @@ struct BridgeEnvironment {
             // The living room shows 2200 K while its default is 2700 K.
             store.temporaryRooms = ["mock-room-0": .temperature(mirek: 454)]
         }
+        if RuntimeEnvironment.flag("mockSwatches") {
+            store.savedSwatches = [(0.0, 1.0), (0.08, 0.9), (0.15, 0.75), (0.33, 0.8), (0.5, 0.6), (0.62, 0.85), (0.8, 0.7), (0.92, 0.5), (0.1, 0.35)]
+                .map { SavedSwatch(hue: $0.0, saturation: $0.1) }
+        }
         if RuntimeEnvironment.flag("mockOutsideChanges") {
             Task {
                 while true {
