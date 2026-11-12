@@ -2,6 +2,7 @@
 # Screenshots of the app in various states, for checking layouts against mockups/.
 # Usage: scripts/shots.sh <out-dir> name "launch args" [name "launch args" …]
 set -euo pipefail
+source "$(dirname "$0")/lock.sh"
 cd "$(dirname "$0")/.."
 OUT="$1"; shift
 mkdir -p "$OUT"

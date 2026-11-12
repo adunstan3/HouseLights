@@ -2,6 +2,7 @@
 # Builds, installs and launches the watch app on the simulator, optionally taking a screenshot.
 # Usage: scripts/run.sh [shot.png] [launch args…]   (SHOT_DELAY=seconds, default 10)
 set -euo pipefail
+source "$(dirname "$0")/lock.sh"
 cd "$(dirname "$0")/.."
 
 DERIVED="${DERIVED:-build/DerivedData}"

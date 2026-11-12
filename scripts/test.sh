@@ -2,6 +2,7 @@
 # Runs the unit tests on a warm watch simulator (never shuts it down).
 # Usage: scripts/test.sh [extra xcodebuild args, e.g. -only-testing:...]
 set -euo pipefail
+source "$(dirname "$0")/lock.sh"
 cd "$(dirname "$0")/.."
 
 DERIVED="${DERIVED:-build/DerivedData}"

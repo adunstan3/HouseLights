@@ -257,6 +257,11 @@ the one you run from Xcode:
   screenshots.
 - `scripts/shots.sh <dir> name "args" …` screenshots several states in one go.
 - `scripts/test.sh` and `scripts/uitest.sh` run the unit and UI tests.
+- `scripts/open.sh [launch args…]` builds and opens the app on your own simulator (the one in DeviceHub).
+- `scripts/locked.sh command…` runs any other build or simulator command under the shared lock.
+
+Every script waits for a lock shared with my other watch apps (`~/Library/Caches/watchapps-build.lock`, see `scripts/lock.sh`), so only one build or test
+runs on the Mac at a time. A script that prints "Waiting for the shared build lock" is queued, not stuck.
 
 Debug launch arguments (simulator / debug builds):
 `-mockTiles 12`, `-unpaired YES`, `-mockOffline YES`, `-mockTemporary YES`,

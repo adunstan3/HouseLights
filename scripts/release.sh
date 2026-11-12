@@ -5,6 +5,7 @@
 # Uses the Apple ID signed in to Xcode (Settings › Accounts) for signing and upload.
 # Usage: scripts/release.sh   (full logs in build/archive.log and build/export.log)
 set -euo pipefail
+source "$(dirname "$0")/lock.sh"
 cd "$(dirname "$0")/.."
 
 ARCHIVE=build/HouseLights.xcarchive
