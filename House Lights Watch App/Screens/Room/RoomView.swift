@@ -12,7 +12,7 @@ struct RoomView: View {
         if let room = app.room(roomID) {
             Screen(title: room.name) {
                 VStack(alignment: .leading, spacing: 6) {
-                    RoomTopRow(room: room, onPower: { app.toggle(roomID) },
+                    RoomTopRow(room: room, movingColors: app.movingColors(room), onPower: { app.toggle(roomID) },
                                onBrightness: { app.setBrightness($0, roomID: roomID) })
                     WarmthSlider(room: room) { app.setWarmth(kelvin: $0, roomID: roomID) }
                     ColorWheelRow(enabled: room.supportsColor) { router.push(.colorWheel(roomID)) }
@@ -31,6 +31,8 @@ struct RoomView: View {
 /// Power button, brightness %, and the brightness slider (drag it, or turn the Crown).
 struct RoomTopRow: View {
     let room: Room
+    /// A lit moving hybrid's colors: the power button drifts through them.
+    var movingColors: [Color]? = nil
     let onPower: () -> Void
     let onBrightness: (Double) -> Void
 
@@ -40,7 +42,10 @@ struct RoomTopRow: View {
                 .font(.system(size: 17, weight: .bold))
                 .foregroundStyle(room.isOn ? Theme.onAccent : .white)
                 .frame(width: 36, height: 36)
-                .background(Circle().fill(room.isOn ? room.fill : AnyShapeStyle(Theme.secondaryButton)))
+                .background {
+                    if room.isOn, let movingColors { DriftingFill(colors: movingColors, shape: Circle()) }
+                    else { Circle().fill(room.isOn ? room.fill : AnyShapeStyle(Theme.secondaryButton)) }
+                }
                 .padding(2)
                 .contentShape(Circle())
                 .onTapGesture(perform: onPower)

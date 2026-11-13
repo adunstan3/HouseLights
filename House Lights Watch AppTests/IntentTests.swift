@@ -79,4 +79,33 @@ struct IntentTests {
             RoomSnippetView(room: living, action: .brightness)
         }, "snippets", CGSize(width: 190, height: 140))
     }
+
+    /// Siri and the widget turn on a hybrid chosen in the app while the room was off.
+    @Test func siriTurnsOnAWaitingHybrid() async throws {
+        let (app, mock) = ConnectionTests.makeApp(paired: true)
+        await app.start()
+        let red = WheelColor(hue: 0, saturation: 1), blue = WheelColor(hue: 0.66, saturation: 1)
+        app.setHybrid([red, blue], moving: true, roomID: "mock-room-4")          // Front door, off
+        #expect(await eventually { await mock.currentHome.mixScenes["mock-room-4"] != nil })
+        let room = try await RoomActions.perform(.on, roomID: "mock-room-4", client: mock, store: app.store)
+        #expect(room.isOn)
+        #expect(await mock.currentHome.lights["mock-light-4-a"]?.isDynamic == true)
+        #expect(!app.store.pendingMix.contains("mock-room-4"))
+    }
+
+    /// A Siri change keeps the dimmer's "House Lights Now" scene in step; a warmth ends a hybrid.
+    @Test func siriUpdatesTheRemoteScene() async throws {
+        let (app, mock) = ConnectionTests.makeApp(paired: true)
+        await app.start()
+        app.setRemoteScene("mock-room-0", enabled: true)
+        #expect(await eventually { await mock.currentHome.remoteScenes["mock-room-0"] != nil })
+        app.store.hybrids["mock-room-0"] = Hybrid(colors: [WheelColor(hue: 0, saturation: 1), WheelColor(hue: 0.5, saturation: 1)], moving: false)
+        _ = try await RoomActions.perform(.brightness(40), roomID: "mock-room-0", client: mock, store: app.store)
+        #expect(await mock.currentHome.remoteScenes["mock-room-0"]?.actions.first?.action.dimming?.brightness == 40)
+        _ = try await RoomActions.perform(.warmth(5000), roomID: "mock-room-0", client: mock, store: app.store)
+        #expect(await mock.currentHome.remoteScenes["mock-room-0"]?.color == .temperature(mirek: 200))
+        #expect(app.store.hybrids["mock-room-0"] == nil)
+        _ = try await RoomActions.perform(.brightness(0), roomID: "mock-room-0", client: mock, store: app.store)
+        #expect(await mock.currentHome.remoteScenes["mock-room-0"]?.actions.first?.action.dimming?.brightness == 70)
+    }
 }

@@ -71,7 +71,7 @@ struct GridView: View {
             ForEach(arrangement.readingOrder, id: \.self) { id in
                 if let room = app.room(id), let slot = arrangement.slots[id] {
                     let f = layout.frame(of: slot)
-                    TileButton(room: room, size: layout.tile,
+                    TileButton(room: room, size: layout.tile, movingColors: app.movingColors(room),
                                onTap: { app.toggle(room.id) },
                                onHold: { router.push(.room(room.id)) })
                         .position(x: f.midX, y: f.midY)
@@ -129,11 +129,12 @@ private struct CrownPillView: View {
 private struct TileButton: View {
     let room: Room
     let size: CGFloat
+    var movingColors: [Color]? = nil
     let onTap: () -> Void
     let onHold: () -> Void
 
     var body: some View {
-        RoomTile(room: room, size: size)
+        RoomTile(room: room, size: size, movingColors: movingColors)
             .contentShape(RoundedRectangle(cornerRadius: size * 0.21))
             // The hold is tried first; the tap only counts if the hold fails (released before
             // 0.5 s), so one touch never does both.

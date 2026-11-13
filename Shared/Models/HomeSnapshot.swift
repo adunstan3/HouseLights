@@ -12,6 +12,9 @@ nonisolated struct HomeSnapshot: Sendable, Equatable {
     var remoteScenes: [String: DefaultScene] = [:]
     /// "House Lights Mix" scene per room (the working scene for hybrids).
     var mixScenes: [String: DefaultScene] = [:]
+    /// Every scene the app made ("House Lights…", in any room or zone, including leftovers
+    /// from deleted or renamed rooms), for Settings › Bridge › Log › Remove scenes.
+    var ownSceneIDs: [String] = []
     /// The `bridge_home` grouped light, which switches every light at once.
     var allLightsGroupID: String?
 
@@ -52,11 +55,13 @@ nonisolated struct HomeSnapshot: Sendable, Equatable {
         rooms = roomDTOs.compactMap { make($0, kind: .room) } + zones.compactMap { make($0, kind: .zone) }
 
         let roomIDs = Set(rooms.map(\.id))
+        ownSceneIDs = scenes.filter { ($0.metadata.name ?? "").hasPrefix(DefaultScene.prefix) }.map(\.id)
         for s in scenes where roomIDs.contains(s.group.rid) {
             let name = s.metadata.name ?? ""
             var scene = DefaultScene(id: s.id, roomID: s.group.rid, name: name, actions: s.actions)
             scene.palette = s.palette?.color.map { XY(x: $0.color.xy.x, y: $0.color.xy.y) } ?? []
             scene.autoDynamic = s.auto_dynamic ?? false
+            scene.speed = s.speed ?? Hybrid.speed
             if DefaultScene.isRemoteScene(name) { remoteScenes[s.group.rid] = scene }
             else if DefaultScene.isMixScene(name) { mixScenes[s.group.rid] = scene }
             else if DefaultScene.isDefaultScene(name) { defaults[s.group.rid] = scene }

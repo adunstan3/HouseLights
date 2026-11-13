@@ -73,8 +73,7 @@ extension AppModel {
         let name = DefaultScene.name(for: room.name)
         let existing = home.defaults[roomID]
         var saved = DefaultScene(id: existing?.id ?? "", roomID: roomID, name: existing?.name ?? name, actions: actions)
-        saved.palette = motion?.colors ?? []
-        saved.autoDynamic = motion?.moving ?? false
+        saved.apply(motion)
         home.defaults[roomID] = saved
         Task {
             do {

@@ -23,6 +23,14 @@ struct HybridModelTests {
         let event = #"[{"type":"update","data":[{"id":"l","type":"light","dynamics":{"status":"dynamic_palette","speed":0.25}}]}]"#
         #expect(try EventStreamParser.decode(event).first?.data.first?.dynamics?.status == "dynamic_palette")
     }
+
+    /// Hybrids saved before speeds existed still load, and move slowly as before.
+    @Test func olderSavedHybridsStillDecode() throws {
+        let json = #"{"colors":[{"hue":0,"saturation":1},{"hue":0.5,"saturation":1}],"moving":true}"#
+        let h = try JSONDecoder().decode(Hybrid.self, from: Data(json.utf8))
+        #expect(h.speed == nil && h.pace == .slow && h.moving)
+        #expect(Hybrid.Speed.nearest(0.55) == .medium)
+    }
 }
 
 @MainActor
@@ -108,7 +116,7 @@ struct HybridTests {
         app.setHybrid([red, blue], moving: true, roomID: "mock-room-0")
         #expect(await eventually { await mock.currentHome.remoteScenes["mock-room-0"]?.autoDynamic == true })
         app.toggle("mock-room-0")
-        try await Task.sleep(for: .milliseconds(1100))
+        #expect(await eventually { await mock.currentHome.room("mock-room-0")?.isOn == false })
         try await mock.simulateRemotePress(roomID: "mock-room-0")
         #expect(await mock.currentHome.lights["mock-light-0-a"]?.isDynamic == true)
     }
@@ -124,5 +132,32 @@ struct HybridTests {
             let c = await colors(mock, ["mock-light-4-a", "mock-light-4-b"])
             return await mock.currentHome.room("mock-room-4")?.isOn == true && c[0] == .xy(red.xy(in: .c)) && c[1] == .xy(blue.xy(in: .c))
         })
+    }
+
+    @Test func aHybridIsKeptWhenTheRoomIsSwitchedOff() async throws {
+        let (app, mock) = await ready()
+        app.setHybrid([red, blue], moving: false, roomID: "mock-room-0")
+        #expect(await eventually { await mock.currentHome.lights["mock-light-0-b"]?.color == .xy(blue.xy(in: .c)) })
+        app.toggle("mock-room-0")
+        #expect(await eventually { await mock.currentHome.room("mock-room-0")?.isOn == false })
+        app.lastLocalChange["mock-room-0"] = .distantPast
+        app.apply(try await mock.fetchStates())
+        #expect(app.hybrids["mock-room-0"] != nil)
+    }
+
+    @Test func theChosenSpeedReachesTheMixScene() async {
+        let (app, mock) = await ready()
+        app.setHybrid([red, blue], moving: true, speed: .fast, roomID: "mock-room-0")
+        #expect(await eventually { await mock.currentHome.mixScenes["mock-room-0"]?.speed == Hybrid.Speed.fast.value })
+        app.setHybrid([red, blue], moving: true, roomID: "mock-room-0")          // e.g. a color added: speed kept
+        #expect(app.hybrids["mock-room-0"]?.pace == .fast)
+    }
+
+    @Test func movingRoomsDriftThroughTheHybridsColors() async {
+        let (app, _) = await ready()
+        app.setHybrid([red, blue], moving: false, roomID: "mock-room-0")
+        #expect(app.room("mock-room-0").flatMap(app.movingColors) == nil)        // still: a plain blend
+        app.setHybrid([red, blue], moving: true, roomID: "mock-room-0")
+        #expect(app.room("mock-room-0").flatMap(app.movingColors)?.count == 2)
     }
 }

@@ -2,7 +2,8 @@ import Foundation
 
 /// The one place Siri and the widget change lights. Each call reads the bridge, sends one
 /// command, and updates the last-known rooms the app and widget show. Uses the same rules
-/// as the app (TurnOnPlan, the Crown's 0% → 70%, temporary colors).
+/// as the app (a hybrid or default waiting for turn-on, the Crown's 0% → 70%, temporary
+/// colors), and keeps the room's remote scene ("House Lights Now") in step.
 nonisolated enum RoomAction: Sendable, Equatable {
     case on, off, toggle
     case brightness(Int)
@@ -12,12 +13,13 @@ nonisolated enum RoomAction: Sendable, Equatable {
 nonisolated enum RoomActions {
     /// Performs the action and returns the room's new state.
     @MainActor
-    static func perform(_ action: RoomAction, roomID: String) async throws -> Room {
+    /// `client` and `store` are for tests; Siri and the widget use the saved bridge.
+    static func perform(_ action: RoomAction, roomID: String, client given: (any BridgeClient)? = nil,
+                        store: SharedStore = SharedStore()) async throws -> Room {
         let log = BridgeLog()
         defer { log.saveNow() }
         log.add(.info, "Intent: \(action) for \(roomID)")
-        let store = SharedStore()
-        let client = try makeClient(log: log.sink)
+        let client = try given ?? makeClient(log: log.sink)
         let home: HomeSnapshot
         do { home = try await client.fetchHome() } catch { throw IntentError.from(error) }
         guard var room = home.room(roomID) else { throw IntentError.roomGone }
@@ -29,8 +31,20 @@ nonisolated enum RoomActions {
             switch resolved {
             case .off, .brightness(0):
                 try await client.send(.power(false), toGroupedLight: room.groupedLightID)
-                if case .brightness = resolved { store.zeroDimmed.insert(roomID) }
+                if case .brightness = resolved {
+                    store.zeroDimmed.insert(roomID)
+                    await updateRemoteScene(home: home, room: room, store: store, client: client, log: log,
+                                            brightness: CrownBrightness.backOnLevel)   // the remote brings it back at 70%
+                }
                 room.isOn = false
+            case .on where store.pendingMix.contains(roomID) && home.mixScenes[roomID] != nil:
+                // A hybrid chosen in the app while the room was off.
+                let scene = home.mixScenes[roomID]!
+                try await client.recallScene(id: scene.id, brightness: room.brightness >= 1 ? room.brightness : nil,
+                                             dynamic: store.hybrids[roomID]?.moving ?? scene.autoDynamic)
+                store.pendingMix.remove(roomID)
+                store.zeroDimmed.remove(roomID)
+                room.isOn = true
             case .on:
                 let plan = TurnOnPlan.make(room: room, pendingDefault: store.pendingDefaults.contains(roomID),
                                            zeroDimmed: store.zeroDimmed.contains(roomID),
@@ -55,6 +69,7 @@ nonisolated enum RoomActions {
                 store.zeroDimmed.remove(roomID)
                 room.isOn = true
                 room.brightness = b
+                await updateRemoteScene(home: home, room: room, store: store, client: client, log: log, brightness: b)
             case .warmth(let k):
                 var mirek = ColorMath.mirek(fromKelvin: min(max(k, ColorMath.minKelvin), ColorMath.maxKelvin))
                 if let r = room.mirekRange { mirek = min(max(mirek, r.lowerBound), r.upperBound) }
@@ -63,8 +78,12 @@ nonisolated enum RoomActions {
                 if let d = home.defaults[roomID]?.color, d.isClose(to: color) { store.temporaryRooms[roomID] = nil }
                 else if home.defaults[roomID] != nil { store.temporaryRooms[roomID] = color }
                 store.pendingDefaults.remove(roomID)
+                store.hybrids[roomID] = nil          // a single warmth replaces a hybrid
+                store.pendingMix.remove(roomID)
                 room.isOn = true
                 room.color = color
+                room.mixColors = nil
+                await updateRemoteScene(home: home, room: room, store: store, client: client, log: log, color: color)
             case .toggle:
                 break
             }
@@ -76,6 +95,35 @@ nonisolated enum RoomActions {
         if let i = rooms.firstIndex(where: { $0.id == roomID }) { rooms[i] = room }
         store.lastKnownRooms = rooms
         return room
+    }
+
+    /// Keeps the room's "House Lights Now" scene (what its dimmer recalls) in step with a Siri
+    /// change, as the app does: a new warmth replaces the scene's colors; a new brightness
+    /// keeps them (hybrid included) at the new level. Failures are logged, not thrown: the
+    /// lights already changed.
+    @MainActor
+    static func updateRemoteScene(home: HomeSnapshot, room: Room, store: SharedStore, client: any BridgeClient,
+                                  log: BridgeLog, color: LightColor? = nil, brightness: Double? = nil) async {
+        guard store.remoteRooms.contains(room.id), let remote = home.remoteScenes[room.id] else { return }
+        let level = brightness ?? (room.brightness >= 1 ? room.brightness : nil)
+        var actions: [HueSceneAction]
+        var motion: SceneMotion?
+        if let color {
+            actions = DefaultScene.actions(for: home.lights(in: room), color: color, brightness: level)
+        } else {
+            actions = remote.actions.map { a in
+                var a = a
+                if let level { a.action.dimming = HueDimming(brightness: level) }
+                return a
+            }
+            motion = remote.motion.map { m in
+                var m = m
+                if let level { m.brightness = level }
+                return m
+            }
+        }
+        do { try await client.updateScene(id: remote.id, actions: actions, motion: motion) }
+        catch { log.add(.error, "Remote scene for \(room.name): \(error.localizedDescription)") }
     }
 
     /// Reads the bridge (used when the last-known room list is empty).

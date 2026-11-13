@@ -57,12 +57,13 @@ extension AppModel {
             if let existing = home.remoteScenes[roomID], !existing.id.isEmpty {
                 try await client.updateScene(id: existing.id, actions: actions, motion: motion)
                 home.remoteScenes[roomID]?.actions = actions
-                home.remoteScenes[roomID]?.palette = motion?.colors ?? []
-                home.remoteScenes[roomID]?.autoDynamic = motion?.moving ?? false
+                home.remoteScenes[roomID]?.apply(motion)
             } else {
                 let name = DefaultScene.remoteName(for: room.name)
                 let id = try await client.createScene(name: name, roomID: roomID, actions: actions, motion: motion)
-                home.remoteScenes[roomID] = DefaultScene(id: id, roomID: roomID, name: name, actions: actions)
+                var created = DefaultScene(id: id, roomID: roomID, name: name, actions: actions)
+                created.apply(motion)
+                home.remoteScenes[roomID] = created
                 log.add(.info, "Created remote scene \"\(name)\"")
             }
         } catch {

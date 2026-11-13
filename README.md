@@ -70,8 +70,8 @@ fallback. Zones aren't shown.
 - **All off** (left of the clock) turns every light off with one command; the gear (right
   of the clock) opens Settings.
 - **Live:** changes made in the Hue app, with a switch or a remote show up within a second
-  through the bridge's event stream, and within 3 seconds at most through a quiet backup read
-  while the app is open.
+  through the bridge's event stream. A quiet backup read runs every 3 seconds while the
+  stream is silent or down, and every 20 seconds while the stream is delivering updates.
 
 ### Room screen
 
@@ -97,15 +97,21 @@ scrolls. The color is sent when your finger lifts, converted to Hue's CIE xy
 coordinates and fitted to the colors the room's bulbs can show.
 
 <p>
-  <img src="docs/screenshots/hybrid-colors.png" width="180" alt="Two saved colors selected as a moving hybrid">
-  <img src="docs/screenshots/hybrid-grid.png" width="180" alt="A hybrid room's tile blending its colors">
+  <img src="docs/screenshots/hybrid-colors.png" width="180" alt="Two saved colors selected as a moving hybrid, with Slow, Medium and Fast">
+  <img src="docs/screenshots/hybrid-grid.png" width="180" alt="A moving hybrid room's tile with its colors drifting">
+  <img src="docs/screenshots/room-hybrid.png" width="180" alt="Room screen for a moving hybrid: Mix · moving">
 </p>
 
 **Hybrids:** tap two or more saved colors and each bulb in the room gets one of them. Turn
 on **Moving** and the bridge slowly morphs the lights between the colors (a Hue dynamic
 scene, so it keeps going after you put the watch away); it's forced on when you pick more
-colors than the room has bulbs. The room's tile blends the colors. Set as default saves a
-hybrid as the room's default, moving included, and remote scenes start it too.
+colors than the room has bulbs. While Moving is on, **Slow / Medium / Fast** sets how quickly
+the bridge morphs (0.25, 0.5 and 0.8 on the bridge's 0–1 scale). The room's tile blends the
+colors; a moving hybrid's tile and Room-screen power button slowly drift through them
+(still, with Reduce Motion on). The Room screen's warmth label reads **Mix** or
+**Mix · moving**. A hybrid picked for a room that's off waits for the next turn-on, from the
+app, the widget or Siri. Set as default saves a hybrid as the room's default, moving and
+speed included, and remote scenes start it too.
 
 The **pin** button right of the clock saves the current color. Saved colors appear below
 the wheel, four across; turn the Crown or drag the page to scroll to them. Tap a swatch to use it in this
@@ -181,7 +187,18 @@ instead.
 </p>
 
 Settings › Bridge › Log › records every request, response code and error, newest first,
-and survives relaunches — so a photo of it explains any problem at home.
+and survives relaunches — so a photo of it explains any problem at home. The share button
+by the clock sends the whole log as text (Messages or Mail). At the bottom of the log:
+
+- **Save bridge replies** reads the bridge's `room`, `zone`, `grouped_light`, `light`,
+  `scene`, `device` and `bridge_home` lists exactly as sent and saves them as one JSON file
+  (`bridge-replies.json` in the App Group folder), then offers **Share bridge replies**. The
+  replies hold no key or password.
+- **Remove House Lights scenes** (after a confirmation) deletes every "House Lights…" scene
+  on the bridge (defaults, "Now" and "Mix" scenes, including leftovers from renamed rooms)
+  and forgets the defaults, hybrids and remote rooms. The lights stay as they are; a dimmer
+  pointed at a "Now" scene stops working until you set it up again.
+- **Clear log.**
 
 ### Smart Stack widget
 
@@ -191,7 +208,8 @@ and survives relaunches — so a photo of it explains any problem at home.
 
 A rectangular widget with up to four round toggles in each room's color. Choose the rooms
 by editing the widget on the watch. A tap switches the room without opening the app, then
-the widget shows the bridge's new state; it doesn't poll.
+the widget shows the bridge's new state; it doesn't poll. Changes made in the app reach the
+widget about 2 seconds after they stop.
 
 ### Siri
 
@@ -205,7 +223,10 @@ Rooms (and zones) are known to Siri by their Hue names:
 - "Set the living room in House Lights" — Siri then asks for the percentage
 - "Set the living room warmth in House Lights" — Siri then asks for the kelvin
 
-If the bridge can't be reached, Siri says so plainly.
+Siri and the widget follow the app's rules: a default or hybrid waiting for turn-on is
+shown, a room dimmed to 0% comes back at 70%, a warmth replaces a hybrid, and a room with a
+remote scene has its "Now" scene updated too. If the bridge can't be reached, Siri says so
+plainly.
 
 ## How it talks to the bridge
 
@@ -236,6 +257,7 @@ Each room can have up to three scenes from House Lights (they show in the Hue ap
 
 Point remotes at the "Now" scenes, never the "Mix" ones; a hybrid is copied into the room's
 "Now" scene too, so the remote brings it back. Scenes you made yourself are never touched.
+Settings › Bridge › Log › **Remove House Lights scenes** deletes all of them at once.
 
 ## What's stored on the watch
 
@@ -244,7 +266,9 @@ Point remotes at the "Now" scenes, never the "Mix" ones; a hybrid is copied into
 | Bridge application key, pinned certificate hash | Keychain, shared with the widget |
 | Bridge IP, grid order, temporary rooms, last-known room states | App Group defaults, shared with the widget |
 | Room defaults | Scenes on the bridge, "House Lights – \<room\>" |
+| Saved colors, hybrids (colors, moving, speed), remote rooms, grid layout | App Group defaults |
 | Bridge log | App Group folder (`bridge-log.json`) |
+| Saved bridge replies (only when you tap Save) | App Group folder (`bridge-replies.json`) |
 
 ## Building and running
 
@@ -271,18 +295,26 @@ Debug launch arguments (simulator / debug builds):
 
 ### Releasing through TestFlight
 
-Bump `CURRENT_PROJECT_VERSION` on every target, then run `scripts/release.sh`. It archives
-for any watchOS device and uploads to App Store Connect for internal TestFlight testing,
-using the Apple ID signed in to Xcode.
+Commit everything, then run `scripts/release.sh` (the same script in all three watch apps;
+this app's values are in `scripts/app.env`). It refuses uncommitted changes; picks the
+build number (each uploaded build is tagged `build-<N>`, and if the current number is
+already tagged it bumps every target and commits "Build N"); runs the unit tests
+(`UI_TESTS=1` adds the UI tests); archives for any watchOS device; checks the build number
+and `ITSAppUsesNonExemptEncryption = NO` in the archive; uploads to App Store Connect for
+internal TestFlight testing with the Apple ID signed in to Xcode; and tags the commit
+`build-<N>`. `PUSH=1` also pushes the branch and the tag. Logs: `build/archive.log`,
+`build/export.log`.
 
 ## Tests
 
-- **134 unit tests** (Swift Testing, about 3 seconds): color maths and gamut clamping,
+- **143 unit tests** (Swift Testing, about 5 seconds): color maths and gamut clamping,
   command merging and the once-a-second sender, the event-stream parser, building the home
   from bridge-shaped JSON, pairing and certificate pinning, grid sizes, the Crown rules,
   the four Arrange drag rules, defaults and temporary colors, live sending while dragging,
-  the settle window and reloads racing a tap, saved colors, Siri actions and the widget's
-  rooms. Widget and Siri snapshots render
+  the settle window and reloads racing a tap, saved colors, hybrids (off rooms, speed,
+  drifting colors), remote scenes, Siri actions (waiting hybrids, remote scenes) and the
+  widget's rooms, and the Log tools (removing scenes, saving replies). Tests wait for
+  results with `eventually { … }` rather than fixed sleeps. Widget and Siri snapshots render
   to PNGs with `TEST_RUNNER_SNAPSHOT_DIR=… scripts/test.sh`.
 - **12 UI tests** (XCTest, about 2 minutes): tap toggles, hold opens without toggling, the
   Crown on every screen (and never scrolling the big grid), a real Arrange drag, the

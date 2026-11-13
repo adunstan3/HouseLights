@@ -48,7 +48,7 @@ struct RemoteSceneTests {
         })
         // The room is switched off, then on with the dimmer: it comes back in the watch's look.
         app.toggle("mock-room-0")
-        try await Task.sleep(for: .milliseconds(1100))
+        #expect(await eventually { await mock.currentHome.room("mock-room-0")?.isOn == false })
         try await mock.simulateRemotePress(roomID: "mock-room-0")
         let light = await mock.currentHome.lights["mock-light-0-a"]
         #expect(light?.isOn == true && light?.color == .temperature(mirek: 200) && light?.brightness == 40)
@@ -97,7 +97,7 @@ struct RemoteSceneTests {
         #expect(await eventually {
             await remoteScene(mock, "mock-room-0")?.actions.first?.action.dimming?.brightness == 70
         })
-        try await Task.sleep(for: .milliseconds(1100))
+        #expect(await eventually { await mock.currentHome.room("mock-room-0")?.isOn == false })
         try await mock.simulateRemotePress(roomID: "mock-room-0")
         #expect(await mock.currentHome.lights["mock-light-0-a"]?.brightness == 70)
     }
@@ -118,7 +118,7 @@ struct RemoteSceneTests {
         for _ in 0..<20 { app.crownStep(-1) }
         #expect(app.store.zeroDimmed.contains("mock-room-0"))
         #expect(await eventually { await remoteScene(mock, "mock-room-0")?.actions.first?.action.dimming?.brightness == 70 })
-        try await Task.sleep(for: .milliseconds(1100))
+        #expect(await eventually { await mock.currentHome.room("mock-room-0")?.isOn == false })
         try await mock.simulateRemotePress(roomID: "mock-room-0")     // while the app isn't looking
         app.lastLocalChange["mock-room-0"] = .distantPast
         await app.reload()

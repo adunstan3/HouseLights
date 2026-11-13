@@ -102,6 +102,7 @@ extension AppModel {
         guard let i = home.rooms.firstIndex(where: { $0.id == roomID }) else { return }
         change(&home.rooms[i])
         store.lastKnownRooms = home.rooms
+        scheduleWidgetRefresh()
     }
 
     func enqueue(_ command: GroupedLightCommand, for room: Room) {

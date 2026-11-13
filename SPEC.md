@@ -46,7 +46,7 @@ Every screen fits one watch screen without scrolling. The one exception is the g
 - **Size:** shows every room on the bridge, with none hidden. Zones are not shown on the grid or in Arrange (they're still available to Siri and the widget). 1–4 tiles = two across (big tiles); 5–9 = three across; 10 or more = three across, scrolled by dragging. Never four across. Tiles are as large as the rows in use allow, so 5–6 rooms fill the screen's width.
 - **Tiles:** square, rounded. A lit tile fills with the room's current color, shows a dark icon and its brightness %. An off tile is dark gray and says Off.
 - **Icons:** chosen from each room's Hue archetype (sofa for living room, frying pan for kitchen (SF Symbols has no chef's hat), bed, monitor for office, door for front door, house for zones, and so on), with a bulb as the fallback. No name labels by default.
-- **Live updates backup:** while the app is open it also reads the lights' state every 3 seconds (quietly, logging only failures), so remotes, switches and the Hue app show up even if the event stream isn't delivering. The log notes the first update each event-stream connection receives.
+- **Live updates backup:** while the app is open it also reads the lights' state (quietly, logging only failures), so remotes, switches and the Hue app show up even if the event stream isn't delivering: every 3 seconds while the stream is down or hasn't delivered anything, every 20 seconds while it is delivering updates (it drops back to 3 seconds as soon as the stream drops). The log notes the first update each event-stream connection receives.
 - **Live updates while tapping:** for two seconds after the app changes a room, its own state wins over live updates for that room (the bridge can echo older or in-between states); the newest update is applied once that time is up.
 - **Tap** a tile to toggle that room. **Hold** it 0.5 s to open its Room screen; a hold never also toggles.
 - **All off:** one command to the bridge's all-lights group (`bridge_home`'s `grouped_light`), not one per tile.
@@ -81,8 +81,9 @@ Arrange tiles look like the grid's current state: lit rooms in their color, off 
 - The Crown sets that room's brightness in 5% steps (snapping to multiples of 5), with no scroll indicator; the brightness bar is also a slider you can drag. Its on/off button toggles the room.
 - Changing warmth or color of a room that's off doesn't turn it on: the change is sent without "on" (current Hue bulbs apply it when next switched on), and the tile stays off.
 - **Warmth** sets color temperature (2200–6500 K). **Color wheel** sets color. Whichever was touched last is what the lights show.
-- **Hybrids:** tapping saved colors selects them (numbered in the order tapped, up to 9). One selected is a single color; two or more make a hybrid: each color bulb gets one of the colors, in turn. A **Moving** toggle appears for a hybrid; it's forced on when there are more colors than color bulbs. Moving hybrids are played by the bridge as a Hue dynamic scene (the lights slowly morph between the colors, speed 0.25), so they keep going after the watch is put away. Dragging on the wheel goes back to a single color. A hybrid is shown through a working scene per room, "House Lights Mix – \<room\>" (per-light colors, the palette, and `auto_dynamic` when moving). On a room that's off, the hybrid is saved and shown the next time the app turns it on.
-- **Hybrid tiles:** a room whose lights show different colors has its tile (and power button, widget toggle) filled with a diagonal blend of them.
+- **Hybrids:** tapping saved colors selects them (numbered in the order tapped, up to 9). One selected is a single color; two or more make a hybrid: each color bulb gets one of the colors, in turn. A **Moving** toggle appears for a hybrid; it's forced on when there are more colors than color bulbs. Moving hybrids are played by the bridge as a Hue dynamic scene (the lights morph between the colors), so they keep going after the watch is put away. While Moving is on, **Slow / Medium / Fast** buttons set the bridge's speed (0.25 / 0.5 / 0.8; Slow for hybrids saved before speeds existed); the speed is written into the scene, since a recall can't set it. Dragging on the wheel goes back to a single color. A hybrid is shown through a working scene per room, "House Lights Mix – \<room\>" (per-light colors, the palette, and `auto_dynamic` when moving). On a room that's off, the hybrid is saved and shown the next time the app turns it on.
+- **Hybrid tiles:** a room whose lights show different colors has its tile (and power button, widget toggle) filled with a diagonal blend of them. A lit, moving hybrid's grid tile and Room-screen power button slowly drift through its colors (a gradient turning once every 14 seconds; still with Reduce Motion). The Room screen's warmth label reads "Mix" or "Mix · moving" (no knob until dragged).
+- **Hybrids and off rooms:** switching a room off (in the app, by a remote) keeps its hybrid; Siri and the widget turn on a hybrid that's waiting for turn-on.
 - **Hybrid defaults:** Set as default saves a hybrid as the room's default (per-light colors, palette, and whether it moves); Back to default brings it back, moving if it was. Remote scenes follow hybrids too, and start moving ones moving. While the bulbs morph (or still show the hybrid's colors) the room stays temporary.
 - **Saved colors:** the pin button saves the wheel's current color. Saved colors sit below the wheel as swatches, four across, newest first; turn the Crown or drag the page to scroll to them (dragging on the wheel picks a color). Tap swatches to select them (see Hybrids); hold one to remove it. They're shared by every room and kept on the watch; near-duplicates aren't saved twice.
 - The color wheel sends a color when the finger lifts, not on every movement. Convert the wheel's color to Hue's CIE xy coordinates and clamp it to the room's color gamut (the gamut most of its color bulbs share, usually Hue's gamut C), so the swatch matches what the bulbs show. It's sent once through the room's `grouped_light`; the bridge fits it to any bulb with a narrower gamut.
@@ -98,7 +99,7 @@ Arrange tiles look like the grid's current state: lit rooms in their color, off 
 
 **Errors**
 
-- No answer from the bridge (or a changed certificate or rejected key) shows Bridge not reachable. A change the bridge refuses shows a short notice for three seconds. Every request and error is in Settings › Bridge › Log.
+- No answer from the bridge (or a changed certificate or rejected key) shows Bridge not reachable. A change the bridge refuses shows a short notice for three seconds. Every request and error is in Settings › Bridge › Log. The Log screen also has: a share button (the log as text); **Save bridge replies** (the raw `room`, `zone`, `grouped_light`, `light`, `scene`, `device` and `bridge_home` lists saved as one JSON file, then shareable); and **Remove House Lights scenes** (after a confirmation, deletes every "House Lights…" scene on the bridge, including leftovers from renamed rooms, and forgets defaults, hybrids and remote rooms; lights are left as they are).
 
 **Remote scenes (Hue dimmer switches)**
 
@@ -123,7 +124,7 @@ Both run on the same App Intents, so the toggle and brightness logic is written 
 - Rectangular widget headed "House Lights" with 2–4 round room toggles in the room's color when on and gray when off, each labelled with a short name (a trailing "room" dropped, e.g. "Living").
 - The user picks the rooms when adding the widget and changes them by editing it (an AppIntent widget configuration).
 - Tapping a toggle runs the toggle intent without opening the app.
-- It shows the last-known state; a tap re-checks the bridge and refreshes the widget. It doesn't poll.
+- It shows the last-known state; a tap re-checks the bridge and refreshes the widget. It doesn't poll. Changes made in the app (or arriving from the bridge while the app is open) reload the widget about 2 seconds after they stop.
 
 **Siri / App Intents**
 
@@ -131,6 +132,7 @@ Both run on the same App Intents, so the toggle and brightness logic is written 
 - Intents: turn a room on, turn it off, set its brightness, set its warmth.
 - App Shortcuts phrases: "Turn off the bedroom in House Lights", "Turn on the living room in House Lights", "Set the living room in House Lights" (Siri then asks for the percentage: a phrase can hold only one parameter, the room). "Set the living room warmth in House Lights" asks for the kelvin.
 - The result shows a small snippet: the room's icon, name and new state (as on the Siri results mockup).
+- Siri and the widget follow the app's rules: a pending default or hybrid is shown on turn-on, 0% → 70%, a warmth replaces a hybrid, and a room with a remote scene has its "House Lights Now" scene updated (brightness kept with its colors; a warmth replaces them).
 - If the bridge can't be reached, Siri says so plainly.
 
 ## Look and app icon
@@ -154,6 +156,8 @@ The bridge is the source of truth for rooms and light state; the watch keeps onl
 | Which rooms are temporary | App Group UserDefaults | Cleared by Back to default or a color change from outside |
 | Last-known room states | App Group UserDefaults | For the widget and a fast first paint |
 | Room defaults | Bridge scenes "House Lights – \<room>" | Not on the watch |
+| Saved colors, hybrids (colors, moving, speed), remote rooms | App Group UserDefaults | Hybrids saved without a speed load as Slow |
+| Saved bridge replies | App Group folder, bridge-replies.json | Only when Save bridge replies is tapped |
 
 ## Out of scope for v1
 

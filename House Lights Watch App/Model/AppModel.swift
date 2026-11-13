@@ -32,8 +32,16 @@ final class AppModel {
 
     private var streamTask: Task<Void, Never>?
     private var pollTask: Task<Void, Never>?
-    /// How often the backup poll reads the lights' state while the app is open.
+    /// How often the backup poll reads the lights' state while the app is open: every 3 s
+    /// until the event stream is seen delivering, then every 20 s (saves watch battery).
     var pollInterval: Duration = .seconds(3)
+    var slowPollInterval: Duration = .seconds(20)
+    /// When the event stream last delivered an update on the current connection.
+    @ObservationIgnored var lastStreamUpdate: Date?
+    @ObservationIgnored private var widgetTask: Task<Void, Never>?
+
+    /// True once live updates are arriving on the current event-stream connection.
+    var liveUpdatesFlowing: Bool { streamConnected && lastStreamUpdate != nil }
     private var reloadTask: Task<Void, Never>?
     /// When the app last sent something to each room, so stream echoes aren't mistaken for outside changes.
     var lastLocalChange: [String: Date] = [:]
@@ -218,6 +226,7 @@ final class AppModel {
                         guard let self else { return }
                         if !self.streamConnected { self.streamConnected = true; delay = .seconds(1) }
                         received += 1
+                        self.lastStreamUpdate = Date()
                         // Says in the log whether live updates really arrive on this watch.
                         if received == 1 { self.log.add(.event, "Event stream: first update received") }
                         self.apply(events)
@@ -225,6 +234,7 @@ final class AppModel {
                 } catch {}
                 guard let self, !Task.isCancelled else { return }
                 self.streamConnected = false
+                self.lastStreamUpdate = nil
                 self.log.add(.info, "Event stream dropped after \(received) updates; reconnecting in \(delay.components.seconds) s")
                 try? await Task.sleep(for: delay)
                 delay = min(delay * 2, .seconds(30))
@@ -249,7 +259,16 @@ final class AppModel {
         pollTask = Task { [weak self] in
             var failures = 0
             while !Task.isCancelled {
-                try? await Task.sleep(for: self?.pollInterval ?? .seconds(3))
+                // Wait the short or long interval; the long wait is cut short if the stream stops.
+                let slow = self?.liveUpdatesFlowing ?? false
+                let wait = slow ? (self?.slowPollInterval ?? .seconds(20)) : (self?.pollInterval ?? .seconds(3))
+                var waited: Duration = .zero
+                while waited < wait, !Task.isCancelled {
+                    let step = min(.seconds(1), wait - waited)
+                    try? await Task.sleep(for: step)
+                    waited += step
+                    if slow, self?.liveUpdatesFlowing == false { break }
+                }
                 guard let self, !Task.isCancelled, self.phase == .ready else { continue }
                 do {
                     let states = try await client.fetchStates()
@@ -340,10 +359,21 @@ final class AppModel {
         }
     }
 
+    /// Refreshes the Smart Stack widget about 2 s after the last change, so it shows what the
+    /// lights are doing without a reload for every step of a Crown turn.
+    func scheduleWidgetRefresh() {
+        widgetTask?.cancel()
+        widgetTask = Task {
+            try? await Task.sleep(for: .seconds(2))
+            if !Task.isCancelled { WidgetCenter.shared.reloadAllTimelines() }
+        }
+    }
+
     /// Bookkeeping after live updates from outside the app (ignoring echoes of our own commands
     /// for 3 s): a room switched on elsewhere is no longer "dimmed to 0", and a color changed
     /// elsewhere is no longer temporary.
     func roomsChangedFromStream(_ ids: Set<String>) {
+        scheduleWidgetRefresh()
         let quiet = ids.filter { Date().timeIntervalSince(lastLocalChange[$0] ?? .distantPast) > 3 }
         let lit = quiet.filter { home.room($0)?.isOn == true }
         if !lit.isEmpty { store.zeroDimmed.subtract(lit) }

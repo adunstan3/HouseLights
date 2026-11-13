@@ -20,6 +20,13 @@ nonisolated protocol BridgeClient: Sendable {
     /// `dynamic` starts its palette moving ("dynamic_palette") instead of a still recall.
     func recallScene(id: String, brightness: Double?, dynamic: Bool) async throws
 
+    /// DELETE a scene (only ever one of ours: "House Lights…").
+    func deleteScene(id: String) async throws
+
+    /// One resource list exactly as the bridge sent it (`light`, `scene`, …), for
+    /// Log › Save bridge replies.
+    func rawResource(_ name: String) async throws -> Data
+
     /// The live event stream. It ends (or throws) when the connection drops; callers reconnect.
     func events() -> AsyncThrowingStream<[HueEvent], any Error>
 
@@ -45,6 +52,10 @@ extension BridgeClient {
     func recallScene(id: String, brightness: Double?) async throws {
         try await recallScene(id: id, brightness: brightness, dynamic: false)
     }
+
+    /// Defaults for test bridges.
+    func deleteScene(id: String) async throws { throw BridgeError.http(501, "not supported") }
+    func rawResource(_ name: String) async throws -> Data { Data("{}".utf8) }
 
     /// Default: read everything (mock and test bridges).
     func fetchStates() async throws -> LiveStates {

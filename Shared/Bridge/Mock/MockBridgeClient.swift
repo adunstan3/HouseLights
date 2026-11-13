@@ -73,8 +73,8 @@ actor MockBridgeClient: BridgeClient {
         try await respond("POST /clip/v2/resource/scene — \(name)")
         let id = "mock-scene-\(UUID().uuidString.prefix(8))"
         var scene = DefaultScene(id: id, roomID: roomID, name: name, actions: actions)
-        scene.palette = motion?.colors ?? []
-        scene.autoDynamic = motion?.moving ?? false
+        scene.apply(motion)
+        home.ownSceneIDs.append(id)
         if DefaultScene.isRemoteScene(name) { home.remoteScenes[roomID] = scene }
         else if DefaultScene.isMixScene(name) { home.mixScenes[roomID] = scene }
         else { home.defaults[roomID] = scene }
@@ -85,13 +85,25 @@ actor MockBridgeClient: BridgeClient {
         try await respond("PUT /clip/v2/resource/scene/\(id)")
         func change(_ s: inout DefaultScene) {
             s.actions = actions
-            s.palette = motion?.colors ?? []
-            s.autoDynamic = motion?.moving ?? false
+            s.apply(motion)
         }
         if let roomID = home.remoteScenes.first(where: { $0.value.id == id })?.key { change(&home.remoteScenes[roomID]!); return }
         if let roomID = home.mixScenes.first(where: { $0.value.id == id })?.key { change(&home.mixScenes[roomID]!); return }
         guard let roomID = home.defaults.first(where: { $0.value.id == id })?.key else { throw BridgeError.http(404, "no scene") }
         change(&home.defaults[roomID]!)
+    }
+
+    func deleteScene(id: String) async throws {
+        try await respond("DELETE /clip/v2/resource/scene/\(id)")
+        home.defaults = home.defaults.filter { $0.value.id != id }
+        home.remoteScenes = home.remoteScenes.filter { $0.value.id != id }
+        home.mixScenes = home.mixScenes.filter { $0.value.id != id }
+        home.ownSceneIDs.removeAll { $0 == id }
+    }
+
+    func rawResource(_ name: String) async throws -> Data {
+        try await respond("GET /clip/v2/resource/\(name)")
+        return Data(#"{"errors":[],"data":[],"note":"mock bridge"}"#.utf8)
     }
 
     func recallScene(id: String, brightness: Double?, dynamic: Bool) async throws {

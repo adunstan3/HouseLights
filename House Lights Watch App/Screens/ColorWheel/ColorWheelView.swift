@@ -4,7 +4,8 @@ import WatchKit
 /// The Color wheel screen: the largest wheel that fits and a pin button (right of the clock)
 /// that saves the current color. Saved colors sit below the wheel, four across; turn the
 /// Crown or drag the page to scroll to them. Tap swatches to select them: one is a single
-/// color, two or more a hybrid (one color per bulb), with a Moving toggle. Hold a swatch to
+/// color, two or more a hybrid (one color per bulb), with a Moving toggle and, while moving,
+/// a Slow / Medium / Fast choice. Hold a swatch to
 /// remove it. Brightness is set on the Room screen. The color is sent when the finger lifts.
 struct ColorWheelView: View {
     let roomID: String
@@ -14,6 +15,7 @@ struct ColorWheelView: View {
     /// Selected swatches, in the order tapped.
     @State private var selection: [SavedSwatch.ID] = []
     @State private var moving = false
+    @State private var speed: Hybrid.Speed = .slow
 
     var body: some View {
         GeometryReader { geo in
@@ -118,7 +120,8 @@ struct ColorWheelView: View {
             knob = (chosen[0].hue, chosen[0].saturation)
             send((chosen[0].hue, chosen[0].saturation))
         default:
-            app.setHybrid(chosen.map { WheelColor(hue: $0.hue, saturation: $0.saturation) }, moving: moving, roomID: roomID)
+            app.setHybrid(chosen.map { WheelColor(hue: $0.hue, saturation: $0.saturation) }, moving: moving,
+                          speed: speed, roomID: roomID)
         }
     }
 
@@ -138,14 +141,43 @@ struct ColorWheelView: View {
                     .lineLimit(2)
                     .minimumScaleFactor(0.8)
             }
+            if moving || forced { speedPicker }
         }
         .padding(.horizontal, 4)
+    }
+
+    /// How fast a moving hybrid morphs between its colors.
+    private var speedPicker: some View {
+        HStack(spacing: 4) {
+            ForEach(Hybrid.Speed.allCases, id: \.self) { s in
+                let chosen = s == speed
+                Button {
+                    guard !chosen else { return }
+                    speed = s
+                    WKInterfaceDevice.current().play(.click)
+                    applySelection()
+                } label: {
+                    Text(s.label)
+                        .font(.system(size: 13, weight: .semibold))
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.7)
+                        .foregroundStyle(chosen ? Theme.onAccent : .white)
+                        .frame(maxWidth: .infinity, minHeight: 30)
+                        .background(chosen ? Theme.accent : Theme.secondaryButton, in: Capsule())
+                }
+                .buttonStyle(.plain)
+                .accessibilityAddTraits(chosen ? .isSelected : [])
+                .accessibilityIdentifier("speed-\(s.rawValue)")
+            }
+        }
+        .padding(.top, 4)
     }
 
     /// Reopening the screen: select the swatches of the hybrid the room is showing.
     private func restoreSelection() {
         guard selection.isEmpty, let hybrid = app.hybrids[roomID] else { return }
         moving = hybrid.moving
+        speed = hybrid.pace
         selection = hybrid.colors.compactMap { c in
             app.savedSwatches.first { $0.matches(hue: c.hue, saturation: c.saturation) }?.id
         }

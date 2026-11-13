@@ -14,7 +14,7 @@ struct CommandSenderTests {
         sender.enqueue(GroupedLightCommand(brightness: 20), to: "a")
         sender.enqueue(GroupedLightCommand(brightness: 30), to: "a")
         sender.enqueue(GroupedLightCommand(brightness: 40), to: "a")
-        try await Task.sleep(for: .milliseconds(400))
+        #expect(await eventually { rec.sent.count == 2 })
         #expect(rec.sent.map(\.1.brightness) == [10, 40])
         let gap = rec.sent[1].2 - rec.sent[0].2
         #expect(gap >= .milliseconds(180))
@@ -25,8 +25,8 @@ struct CommandSenderTests {
         let sender = CommandSender(interval: .milliseconds(500)) { id, c in rec.sent.append((id, c, .now)) }
         sender.enqueue(.power(true), to: "a")
         sender.enqueue(.power(true), to: "b")
-        try await Task.sleep(for: .milliseconds(50))
-        #expect(Set(rec.sent.map(\.0)) == ["a", "b"])
+        // Both go out at once, well inside the 500 ms window.
+        #expect(await eventually(timeout: .milliseconds(300)) { Set(rec.sent.map(\.0)) == ["a", "b"] })
     }
 
     @Test func mergesQueuedFields() async throws {
@@ -37,7 +37,7 @@ struct CommandSenderTests {
         sender.enqueue(.power(true), to: "a")
         sender.enqueue(GroupedLightCommand(brightness: 70), to: "a")
         #expect(sender.isPending("a"))
-        try await Task.sleep(for: .milliseconds(300))
+        #expect(await eventually { !sender.isPending("a") })
         #expect(rec.sent.last?.1 == GroupedLightCommand(on: true, brightness: 70))
         #expect(!sender.isPending("a"))
     }

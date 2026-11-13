@@ -11,10 +11,19 @@ nonisolated struct DefaultScene: Sendable, Hashable, Identifiable {
     /// Hybrid scenes: the palette colors and whether the scene starts moving when recalled.
     var palette: [XY] = []
     var autoDynamic = false
+    /// The bridge's dynamic speed, 0–1.
+    var speed = Hybrid.speed
 
     var motion: SceneMotion? {
         palette.count >= 2 ? SceneMotion(colors: palette, brightness: actions.first?.action.dimming?.brightness ?? 100,
-                                         moving: autoDynamic) : nil
+                                         moving: autoDynamic, speed: speed) : nil
+    }
+
+    /// Takes a hybrid's palette, moving and speed (or clears them for a single color).
+    mutating func apply(_ motion: SceneMotion?) {
+        palette = motion?.colors ?? []
+        autoDynamic = motion?.moving ?? false
+        speed = motion?.speed ?? Hybrid.speed
     }
 
     /// The different colors its lights are set to (more than one for a hybrid).

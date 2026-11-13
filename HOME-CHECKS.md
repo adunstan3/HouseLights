@@ -1,8 +1,11 @@
 # House Lights — checks for the first test at home
 
 The simulator uses a mock bridge, so everything below can only be confirmed on the watch,
-on home Wi-Fi. If something fails, open **Settings › Bridge › Log ›** and take a photo; every
-request, response code and error is there (newest first).
+on home Wi-Fi. If something fails, open **Settings › Bridge › Log ›** and tap the share button by the clock
+to send the log as text (or take a photo); every request, response code and error is there
+(newest first). For anything odd about rooms, lights or scenes, also tap **Save bridge
+replies** at the bottom of the log, then **Share bridge replies**: that's the bridge's own
+data, exactly as it sent it.
 
 ## Before uploading (Mac)
 
@@ -16,7 +19,8 @@ request, response code and error is there (newest first).
    both should list App Groups (the group above) and Keychain Sharing
    (`com.andrewdunstan.HouseLights.shared`), team **Andrew Dunstan**. If either shows a red
    error, press "Try Again" or untick/retick "Automatically manage signing".
-4. Bump the build number on all targets, archive with **Any watchOS Device**, upload.
+4. Commit, then run `scripts/release.sh`: it bumps the build number if needed, runs the
+   tests, archives, uploads and tags the build `build-<N>`.
 
 ## At home
 
@@ -26,13 +30,16 @@ request, response code and error is there (newest first).
 | Pairing | Enter the bridge IP, press its button, tap Pair within 30 s → "Paired, N rooms and M zones". | `POST /api` replies; error 101 means the button wasn't pressed |
 | Certificate | Pairing remembers the bridge's certificate. A later "certificate changed" means the bridge was replaced/reset: Pair again. | `Certificate changed` |
 | Grid | Every room and zone appears with a sensible icon; tap toggles; hold opens the room without toggling. | `PUT /clip/v2/resource/grouped_light/…` and its code |
-| Live updates | Change a light in the Hue app, with a remote or at a switch: the tile updates within a second (event stream) or at most 3 s (backup read). | `Event stream: first update received` — if it never appears, the stream isn't delivering on the watch and the 3 s backup is doing the work |
+| Live updates | Change a light in the Hue app, with a remote or at a switch: the tile updates within a second (event stream) or at most 3 s (backup read, while the stream is silent). | `Event stream: first update received` — if it never appears, the stream isn't delivering on the watch and the 3 s backup is doing the work. While the stream works, the backup slows to every 20 s; if changes then take up to 20 s to show, the stream is missing some updates |
 | Crown on grid | Rooms that are on brighten/dim together; 100% stops; 0% turns off; tap brings it back at 70%. Tune the Crown speed if it feels too fast or slow. | |
 | Room screen | Crown brightness, power, Warmth and the color wheel all change the lights while you use them (at most once a second). | `Bridge says: …` after a grouped_light PUT |
 | Temporary colors | Change warmth → Back to default appears; it survives off/on; Back to default restores it; Set as default sticks. "House Lights – <room>" scenes appear in the Hue app. | `POST /clip/v2/resource/scene`, `recall` |
 | Arrange | Dragging is smooth, a held tile makes room, the order sticks after closing the app. | |
-| Widget | Add it to the Smart Stack, pick rooms (edit the widget), toggle without opening the app. | `Intent: toggle …` |
-| Siri | "Turn off the bedroom in House Lights"; "Set the living room in House Lights" (Siri asks for the %). | `Intent: …` |
+| Widget | Add it to the Smart Stack, pick rooms (edit the widget), toggle without opening the app. Change a room in the app, wait a few seconds, check the widget shows it. | `Intent: toggle …` |
+| Siri | "Turn off the bedroom in House Lights"; "Set the living room in House Lights" (Siri asks for the %). With a remote scene on, a Siri brightness change should be what the remote brings back. | `Intent: …`, `Remote scene for …` errors |
+| Hybrid speed | Pick a moving hybrid, try Slow, Medium and Fast. Note which feel right; the values (0.25 / 0.5 / 0.8) are easy to change. | the scene PUT's reply |
+| Hybrid waiting for Siri | Pick a hybrid for an off room, then turn it on with Siri or the widget: it should come on in the hybrid. | `recall moving` |
+| Remove scenes | Only if you want a clean slate: Log › Remove House Lights scenes. The Hue app's scene list loses every "House Lights…" scene; dimmers set to "Now" scenes need setting up again. | `DELETE /clip/v2/resource/scene/…` |
 | Off Wi-Fi | Walk out of range: Bridge not reachable appears instead of hanging. | `timed out` |
 
 ## Setting up the dimmer switches (remote scenes)
@@ -59,7 +66,7 @@ request, response code and error is there (newest first).
 - **Remote scenes:** that a dimmer's On button picks up a scene's new contents after the watch
   rewrites it (it should: the button recalls the scene by id).
 - **Hybrids (dynamic scenes):** a hybrid is a scene "House Lights Mix – <room>" with per-light
-  colors, a `palette`, `speed` 0.25 and `auto_dynamic`; moving ones are recalled with
+  colors, a `palette`, `speed` (0.25 / 0.5 / 0.8 for Slow / Medium / Fast) and `auto_dynamic`; moving ones are recalled with
   `"action": "dynamic_palette"` (from the openhue API description; speed is set when the scene is
   written because the bridge refuses speed in the same request as a recall). Check: pick two
   colors, then three in a two-bulb room (forced moving): the lights should slowly morph, and keep

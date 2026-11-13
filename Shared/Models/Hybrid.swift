@@ -15,11 +15,31 @@ nonisolated struct WheelColor: Codable, Hashable, Sendable {
 nonisolated struct Hybrid: Codable, Hashable, Sendable {
     /// Hue scene palettes hold at most 9 colors.
     static let maxColors = 9
-    /// The bridge's dynamic speed, 0–1; low is a slow morph.
-    static let speed = 0.25
+    /// The bridge's dynamic speed, 0–1, for a hybrid saved before speeds could be chosen.
+    static let speed = Speed.slow.value
 
     var colors: [WheelColor]
     var moving: Bool
+    /// How fast it moves (nil: saved by an older build, which moved slowly).
+    var speed: Speed? = nil
+
+    var pace: Speed { speed ?? .slow }
+
+    /// The Color screen's Slow / Medium / Fast. The bridge takes a speed from 0 to 1; how
+    /// fast each feels on real bulbs is a home check.
+    enum Speed: String, Codable, CaseIterable, Sendable {
+        case slow, medium, fast
+        var value: Double {
+            switch self {
+            case .slow: 0.25
+            case .medium: 0.5
+            case .fast: 0.8
+            }
+        }
+        var label: String { rawValue.capitalized }
+        /// The nearest choice to a scene's stored speed.
+        static func nearest(_ v: Double) -> Speed { allCases.min { abs($0.value - v) < abs($1.value - v) }! }
+    }
 
     /// More colors than bulbs can only be shown by moving between them.
     static func mustMove(colors: Int, bulbs: Int) -> Bool { colors > max(bulbs, 1) }

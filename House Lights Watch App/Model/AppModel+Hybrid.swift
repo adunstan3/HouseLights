@@ -1,4 +1,4 @@
-import Foundation
+import SwiftUI
 
 /// Hybrid color schemes: several saved colors spread over a room's bulbs, one per bulb,
 /// optionally moving (the bridge morphs the lights between them). Shown through a working
@@ -16,10 +16,11 @@ extension AppModel {
 
     /// Shows a hybrid in a room. An off room stays off: the mix is saved and shown the next
     /// time the app turns the room on.
-    func setHybrid(_ colors: [WheelColor], moving: Bool, roomID: String) {
+    func setHybrid(_ colors: [WheelColor], moving: Bool, speed: Hybrid.Speed? = nil, roomID: String) {
         guard let room = room(roomID), colors.count >= 2 else { return }
         let hybrid = Hybrid(colors: Array(colors.prefix(Hybrid.maxColors)),
-                            moving: moving || mixMustMove(colors: colors.count, roomID: roomID))
+                            moving: moving || mixMustMove(colors: colors.count, roomID: roomID),
+                            speed: speed ?? hybrids[roomID]?.speed)
         _ = prepareColorChange(room)
         hybrids[roomID] = hybrid
         pendingDefaults.remove(roomID)
@@ -59,8 +60,7 @@ extension AppModel {
                 log.add(.info, "Created mix scene for \(room.name)")
             }
             var scene = DefaultScene(id: id, roomID: roomID, name: DefaultScene.mixName(for: room.name), actions: actions)
-            scene.palette = motion.colors
-            scene.autoDynamic = motion.moving
+            scene.apply(motion)
             home.mixScenes[roomID] = scene
             if recall, !Task.isCancelled {
                 lastLocalChange[roomID] = Date()
@@ -79,7 +79,7 @@ extension AppModel {
         let assignments = hybrid.assignments(lightIDs: colorBulbs(room).map(\.id), gamut: room.gamut)
         let actions = DefaultScene.actions(for: home.lights(in: room), assignments: assignments, brightness: level)
         let motion = SceneMotion(colors: hybrid.colors.map { $0.xy(in: room.gamut) },
-                                 brightness: level ?? 100, moving: hybrid.moving)
+                                 brightness: level ?? 100, moving: hybrid.moving, speed: hybrid.pace.value)
         return (actions, motion)
     }
 
@@ -105,6 +105,21 @@ extension AppModel {
         return true
     }
 
+    /// The colors a lit, moving room's tile and power button drift through: its hybrid's, a
+    /// moving default's palette, or whatever its bulbs show. nil when off or still.
+    func movingColors(_ room: Room) -> [Color]? {
+        guard room.isOn, room.isMoving == true else { return nil }
+        let colors: [LightColor]
+        if let hybrid = hybrids[room.id] {
+            colors = hybrid.colors.map { .xy($0.xy(in: room.gamut)) }
+        } else if let palette = defaultScene(room.id)?.palette, palette.count >= 2 {
+            colors = palette.map { .xy($0) }
+        } else {
+            colors = room.colors
+        }
+        return colors.count >= 2 ? colors.map(\.tileColor) : nil
+    }
+
     /// Whether the room's default scene shows the same colors.
     func hybridMatchesDefault(_ hybrid: Hybrid, room: Room) -> Bool {
         guard let defaults = defaultScene(room.id)?.colors, defaults.count == hybrid.colors.count else { return false }
@@ -112,12 +127,14 @@ extension AppModel {
         return mine.allSatisfy { c in defaults.contains { $0.isClose(to: c) } }
     }
 
-    /// Whether a room still shows its app-set hybrid: moving, or every lit color bulb showing
-    /// one of the hybrid's colors.
+    /// Whether a room still shows its app-set hybrid: moving, off (nothing lit to contradict
+    /// it, so a hybrid chosen for an off room, or one a remote switched off, is kept), or every
+    /// lit color bulb showing one of the hybrid's colors.
     func stillShowsHybrid(_ room: Room, _ hybrid: Hybrid) -> Bool {
         if room.isMoving == true { return true }
-        let mine = hybrid.colors.map { LightColor.xy($0.xy(in: room.gamut)) }
         let shown = colorBulbs(room).filter(\.isOn).compactMap(\.color)
-        return !shown.isEmpty && shown.allSatisfy { c in mine.contains { $0.isClose(to: c) } }
+        if shown.isEmpty { return true }
+        let mine = hybrid.colors.map { LightColor.xy($0.xy(in: room.gamut)) }
+        return shown.allSatisfy { c in mine.contains { $0.isClose(to: c) } }
     }
 }

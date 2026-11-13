@@ -77,8 +77,7 @@ struct ControlTests {
         try await Task.sleep(for: .milliseconds(1200))
         app.toggle("mock-room-0")
         #expect(app.room("mock-room-0")?.percent == 70)
-        try await Task.sleep(for: .milliseconds(1200))
-        #expect(await mock.currentHome.room("mock-room-0")?.percent == 70)
+        #expect(await eventually { await mock.currentHome.room("mock-room-0")?.percent == 70 })
         #expect(!app.store.zeroDimmed.contains("mock-room-0"))
     }
 
@@ -121,19 +120,19 @@ struct SettleTests {
 
     /// The reported flash: a late update with the old state arrives just after a tap.
     @Test func lateEchoDoesNotFlashATappedTile() async throws {
-        let (app, _) = ConnectionTests.makeApp(paired: true)
+        let (app, mock) = ConnectionTests.makeApp(paired: true)
         await app.start()
         app.toggle("mock-room-0")                                     // on → off
-        try await Task.sleep(for: .milliseconds(300))                 // the command has gone out
+        #expect(await eventually { await mock.currentHome.room("mock-room-0")?.isOn == false })   // the command has gone out
         app.apply([groupedLight("mock-group-0", on: true)])           // an older "on" arrives late
         #expect(app.room("mock-room-0")?.isOn == false)
     }
 
     @Test func theBridgesLastWordWinsOnceSettled() async throws {
-        let (app, _) = ConnectionTests.makeApp(paired: true)
+        let (app, mock) = ConnectionTests.makeApp(paired: true)
         await app.start()
         app.toggle("mock-room-0")
-        try await Task.sleep(for: .milliseconds(100))                 // the command has gone out
+        #expect(await eventually { await mock.currentHome.room("mock-room-0")?.isOn == false })   // the command has gone out
         app.lastLocalChange["mock-room-0"] = Date().addingTimeInterval(-1.5)   // 0.5 s left to settle
         app.apply([groupedLight("mock-group-0", on: true)])           // e.g. someone switched it back on
         #expect(app.room("mock-room-0")?.isOn == false)               // still settling
@@ -235,7 +234,7 @@ struct BackOnLevelTests {
         #expect(await eventually { await mock.streamCount > 0 })
         app.toggle("mock-room-3")                                     // Office (85%) off with a tap
         for _ in 0..<10 { app.crownStep(1) }                          // the others up to 100
-        try await Task.sleep(for: .milliseconds(300))                 // the bridge reports Office at 0 while off
+        #expect(await eventually { await mock.currentHome.room("mock-room-3")?.isOn == false })   // the bridge reports Office at 0 while off
         app.lastLocalChange["mock-room-3"] = .distantPast
         app.apply(LiveStates(groups: ["mock-group-3": .init(on: false, brightness: 0)], lights: [:]))
         #expect(app.room("mock-room-3")?.percent == 85)               // its level is kept

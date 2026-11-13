@@ -2,12 +2,20 @@ import SwiftUI
 
 /// "WARMTH 3400K" over a warm-to-cool gradient track with a white knob. Drag to change;
 /// the sender throttles what reaches the bridge to the latest value once a second.
+/// A room showing a hybrid reads "Mix" (or "Mix · moving") with no knob until dragged.
 struct WarmthSlider: View {
     let room: Room
     let onChange: (Int) -> Void
     @State private var dragKelvin: Int?
 
-    private var kelvin: Int? { dragKelvin ?? room.color?.kelvin }
+    private var isMix: Bool { dragKelvin == nil && room.mixColors != nil }
+    private var kelvin: Int? { isMix ? nil : dragKelvin ?? room.color?.kelvin }
+
+    private var valueLabel: String {
+        guard room.supportsWarmth || isMix else { return "—" }
+        if isMix { return room.isMoving == true ? "Mix · moving" : "Mix" }
+        return kelvin.map(WarmthScale.label) ?? "Color"
+    }
 
     var body: some View {
         VStack(spacing: 2) {
@@ -16,7 +24,7 @@ struct WarmthSlider: View {
                     .font(.footnote.weight(.semibold))
                     .foregroundStyle(Theme.secondaryText)
                 Spacer()
-                Text(room.supportsWarmth ? kelvin.map(WarmthScale.label) ?? "Color" : "—")
+                Text(valueLabel)
                     .font(.footnote.weight(.semibold))
                     .monospacedDigit()
                     .foregroundStyle(Theme.secondaryText)
@@ -53,7 +61,7 @@ struct WarmthSlider: View {
         .opacity(room.supportsWarmth ? 1 : 0.4)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel("Warmth")
-        .accessibilityValue(kelvin.map { "\($0) kelvin" } ?? "color")
+        .accessibilityValue(isMix ? valueLabel : kelvin.map { "\($0) kelvin" } ?? "color")
         .accessibilityIdentifier("warmth")
         .accessibilityAdjustableAction { direction in
             let k = kelvin ?? 2700

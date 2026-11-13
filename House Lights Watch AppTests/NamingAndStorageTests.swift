@@ -60,7 +60,7 @@ struct NamingAndStorageTests {
     @Test func mockBridgeAppliesCommandsAndEmitsEvents() async throws {
         let mock = MockBridgeClient(latency: .milliseconds(5))
         let stream = mock.events()
-        try await Task.sleep(for: .milliseconds(20))
+        #expect(await eventually { await mock.streamCount > 0 })
         try await mock.send(.power(false), toGroupedLight: "mock-group-0")
         var iterator = stream.makeAsyncIterator()
         let events = try #require(try await iterator.next())

@@ -108,6 +108,14 @@ nonisolated final class HueBridgeClient: BridgeClient {
                               note: motion.map { $0.moving ? "moving mix" : "mix" })
     }
 
+    func deleteScene(id: String) async throws {
+        _ = try await perform("DELETE", "/clip/v2/resource/scene/\(id)")
+    }
+
+    func rawResource(_ name: String) async throws -> Data {
+        try await perform("GET", "/clip/v2/resource/\(name)")
+    }
+
     func recallScene(id: String, brightness: Double?, dynamic: Bool) async throws {
         // `recall.dimming` overrides the scene's stored brightness for every light.
         // "dynamic_palette" starts the palette moving; "active" applies the per-light actions

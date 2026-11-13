@@ -121,6 +121,8 @@ nonisolated struct HueSceneDTO: Decodable, Sendable {
     var palette: HueScenePalette?
     /// Starts moving whenever the scene is recalled (including from a dimmer switch).
     var auto_dynamic: Bool?
+    /// How fast the palette moves, 0–1.
+    var speed: Double?
 }
 
 /// POST /api pairing reply: an array holding either `success` or `error`.
