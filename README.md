@@ -289,6 +289,7 @@ the one you run from Xcode:
 - `scripts/test.sh` and `scripts/uitest.sh` run the unit and UI tests.
 - `scripts/open.sh [--no-launch] [launch args…]` builds and opens the app on your own simulator (the one in DeviceHub); `--no-launch` only installs it.
 - `scripts/locked.sh command…` runs any other build or simulator command under the shared lock.
+- `scripts/pre-commit-secrets.sh` blocks commits that add a Secrets.plist or a Google-style API key. Install it once per clone: `ln -sf ../../scripts/pre-commit-secrets.sh .git/hooks/pre-commit`.
 
 Every script waits for a lock shared with my other watch apps (`~/Library/Caches/watchapps-build.lock`, see `scripts/lock.sh`), so only one build or test
 runs on the Mac at a time. A script that prints "Waiting for the shared build lock" is queued, not stuck.
