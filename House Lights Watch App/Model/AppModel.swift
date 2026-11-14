@@ -189,7 +189,7 @@ final class AppModel {
     /// Called after a successful pairing on the Bridge screen. Throws if the key and its
     /// certificate pin couldn't both be saved (then nothing is kept).
     func didPair(_ paired: PairedBridge) async throws {
-        try environment.saveCredentials(paired, log.sink)
+        _ = try environment.saveCredentials(paired, log.sink)
         log.add(.info, "Saved key and certificate pin for bridge at \(paired.ip)")
         client = nil
         home = .empty
