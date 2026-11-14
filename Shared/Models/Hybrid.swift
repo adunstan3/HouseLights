@@ -62,17 +62,33 @@ nonisolated struct SceneMotion: Sendable, Equatable {
     var moving: Bool
     var speed: Double = Hybrid.speed
 
+    /// The palette as written to the bridge: all four lists, as the bridge itself returns a
+    /// scene's palette (the unused ones empty).
     var palette: HueScenePalette {
         HueScenePalette(color: colors.prefix(Hybrid.maxColors).map {
             HueScenePaletteColor(color: HueSceneColor(xy: HueXY(x: $0.x, y: $0.y)),
                                  dimming: HueDimming(brightness: min(max(brightness, 1), 100)))
-        })
+        }, dimming: [], color_temperature: [], effects: [])
     }
 }
 
-/// Scene `palette` (CLIP v2): up to 9 colors, each an xy color with a brightness.
+/// Scene `palette` (CLIP v2): up to 9 colors, each an xy color with a brightness, plus
+/// palette-wide dimming (max 1), color temperatures (max 1) and effects (max 3), which the
+/// app leaves empty.
 nonisolated struct HueScenePalette: Codable, Sendable, Hashable {
     var color: [HueScenePaletteColor]
+    var dimming: [HueDimming]?
+    var color_temperature: [HueScenePaletteMirek]?
+    var effects: [HueScenePaletteEffect]?
+}
+
+nonisolated struct HueScenePaletteMirek: Codable, Sendable, Hashable {
+    var color_temperature: HueSceneMirek?
+    var dimming: HueDimming?
+}
+
+nonisolated struct HueScenePaletteEffect: Codable, Sendable, Hashable {
+    var effect: String?
 }
 
 nonisolated struct HueScenePaletteColor: Codable, Sendable, Hashable {

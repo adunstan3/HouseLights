@@ -71,7 +71,15 @@ data, exactly as it sent it.
   written because the bridge refuses speed in the same request as a recall). Check: pick two
   colors, then three in a two-bulb room (forced moving): the lights should slowly morph, and keep
   going with the watch away. If not, the log shows the bridge's reply to the scene PUT.
-- **Scene names** are kept within 32 characters (the limit a third-party Hue connector
+- **"The bridge didn't accept that change" for hybrids (build 4):** reported from the real
+  watch for every multi-color pick. Build 5 changes the two things that differ from a
+  single-color default scene: the palette now goes out with all four lists (`color`,
+  `dimming`, `color_temperature`, `effects`, the unused ones empty, as the bridge returns
+  them), and scene names are fitted to 32 *bytes* (the "–" is 3 bytes, so "House Lights Mix –
+  <long room>" could reach 34). If it still fails, find the red **Bridge says:** line just
+  after the `POST`/`PUT /clip/v2/resource/scene` in the log: the bridge names the field it
+  rejected.
+- **Scene names** are kept within 32 bytes (the limit a third-party Hue connector
   documents). Long room names are shortened in the scene name.
 - **Event stream on watchOS.** watchOS may close long-lived connections when the wrist drops;
   the app reconnects when it becomes active again and reloads to catch up.

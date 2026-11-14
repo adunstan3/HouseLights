@@ -38,12 +38,20 @@ nonisolated struct DefaultScene: Sendable, Hashable, Identifiable {
     }
 
     static let prefix = "House Lights"
+    /// The bridge's limit for a scene name. Counted in UTF-8 bytes here to be safe: the "–" in
+    /// our names is 3 bytes, so a name 32 characters long can be 34 bytes.
     static let maxNameLength = 32
+
+    /// `head` plus as much of the room name as fits in `maxNameLength` bytes.
+    static func fitted(_ head: String, _ roomName: String) -> String {
+        var room = roomName
+        while (head + room).utf8.count > maxNameLength, !room.isEmpty { room.removeLast() }
+        return head + room.trimmingCharacters(in: .whitespaces)
+    }
 
     static func name(for roomName: String) -> String {
         let head = "\(prefix) – "
-        let room = String(roomName.prefix(maxNameLength - head.count))
-        return head + room
+        return fitted(head, roomName)
     }
 
     /// A room's default: "House Lights – <room>" (not a "House Lights Now" or "Mix" scene).
@@ -53,7 +61,7 @@ nonisolated struct DefaultScene: Sendable, Hashable, Identifiable {
     static let mixPrefix = "House Lights Mix"
     static func mixName(for roomName: String) -> String {
         let head = "\(mixPrefix) – "
-        return head + String(roomName.prefix(maxNameLength - head.count))
+        return fitted(head, roomName)
     }
     static func isMixScene(_ name: String) -> Bool { name.hasPrefix(mixPrefix) }
 
@@ -79,7 +87,7 @@ nonisolated struct DefaultScene: Sendable, Hashable, Identifiable {
 
     static func remoteName(for roomName: String) -> String {
         let head = "\(remotePrefix) – "
-        return head + String(roomName.prefix(maxNameLength - head.count))
+        return fitted(head, roomName)
     }
 
     static func isRemoteScene(_ name: String) -> Bool { name.hasPrefix(remotePrefix) }

@@ -20,6 +20,26 @@ struct NamingAndStorageTests {
         #expect(DefaultScene.isDefaultScene(long))
     }
 
+    /// The "–" is 3 bytes in UTF-8, so names are fitted to 32 bytes, not 32 characters.
+    @Test func sceneNamesFitInThirtyTwoBytes() {
+        for room in ["Master bedroom", "The very long downstairs living room", "Den"] {
+            for name in [DefaultScene.name(for: room), DefaultScene.mixName(for: room), DefaultScene.remoteName(for: room)] {
+                #expect(name.utf8.count <= 32, "\(name)")
+            }
+        }
+        #expect(DefaultScene.mixName(for: "Den") == "House Lights Mix – Den")
+        #expect(DefaultScene.isMixScene(DefaultScene.mixName(for: "Master bedroom")))
+    }
+
+    /// A hybrid's palette goes out with all four lists, as the bridge returns them.
+    @Test func paletteIsWrittenWithAllFourLists() throws {
+        let motion = SceneMotion(colors: [XY(x: 0.6, y: 0.3), XY(x: 0.2, y: 0.1)], brightness: 80, moving: true)
+        let json = try #require(try JSONSerialization.jsonObject(with: JSONEncoder().encode(motion.palette)) as? [String: Any])
+        #expect(Set(json.keys) == ["color", "dimming", "color_temperature", "effects"])
+        #expect((json["color"] as? [Any])?.count == 2)
+        #expect((json["effects"] as? [Any])?.isEmpty == true)
+    }
+
     @Test func everyArchetypeIconExists() {
         for name in Set(RoomIcon.symbols.values) + [RoomIcon.fallback, "house"] {
             #expect(UIImage(systemName: name) != nil, "missing SF Symbol \(name)")
