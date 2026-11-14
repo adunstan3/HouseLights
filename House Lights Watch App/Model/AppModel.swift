@@ -72,6 +72,7 @@ final class AppModel {
         pendingMix = store.pendingMix
         savedArrangement = store.gridArrangement
         hiddenRooms = store.hiddenRooms
+        houseConfigs = store.houseConfigs
     }
 
     /// The user's grid order (room ids), kept here so the grid redraws when Arrange changes it.
@@ -94,9 +95,13 @@ final class AppModel {
     /// Colors pinned on the Color wheel screen (newest first), shared by every room.
     var savedSwatches: [SavedSwatch] = [] { didSet { store.savedSwatches = savedSwatches } }
 
-    /// Rooms hidden from the grid (dragged to Hidden rooms in Arrange). The grid, the Crown
-    /// and All off leave them alone; Siri and the widget still reach them.
+    /// Rooms hidden from the grid (dragged to Hidden rooms in Arrange). The grid, its Crown
+    /// and saved configurations leave them alone; Siri and the widget still reach them.
     var hiddenRooms: Set<String> = [] { didSet { store.hiddenRooms = hiddenRooms } }
+
+    /// Saved whole-house configurations, newest first.
+    var houseConfigs: [HouseConfig] = [] { didSet { store.houseConfigs = houseConfigs } }
+    @ObservationIgnored var configTask: Task<Void, Never>?
 
     /// Where each room sits on the grid (saved by Arrange; nil until then).
     var savedArrangement: GridArrangement? { didSet { store.gridArrangement = savedArrangement } }
@@ -119,7 +124,7 @@ final class AppModel {
     /// Every room: the grid's, then the hidden ones (Settings lists that aren't the grid).
     var allRooms: [Room] { rooms + hiddenRoomList }
 
-    /// What the grid's Crown and All off act on: rooms and zones, less the hidden rooms.
+    /// What the grid's Crown acts on: rooms and zones, less the hidden rooms.
     var gridControlledRooms: [Room] { home.rooms.filter { !hiddenRooms.contains($0.id) } }
 
     var isActive = false

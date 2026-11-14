@@ -59,10 +59,11 @@ struct RootView: View {
         case .room(let id): RoomView(roomID: id)
         case .colorWheel(let id): ColorWheelView(roomID: id)
         case .remoteScenes: RemoteScenesView()
+        case .configs: ConfigsView()
         }
     }
 
-    /// `-openScreen settings|bridge|log|arrange|room|wheel` and `-openRoom "Name"` (debug only).
+    /// `-openScreen settings|bridge|log|arrange|configs|room|wheel` and `-openRoom "Name"` (debug only).
     private func openDebugScreen() {
         guard !didOpenDebugScreen, app.phase == .ready, let screen = RuntimeEnvironment.debugValue("openScreen") else { return }
         didOpenDebugScreen = true
@@ -74,6 +75,7 @@ struct RootView: View {
         case "log": router.path = [.settings, .bridge, .log]
         case "arrange": router.path = [.settings, .arrange]
         case "remotes": router.path = [.settings, .remoteScenes]
+        case "configs": router.path = [.configs]
         case "room": router.path = [.room(roomID)]
         case "wheel": router.path = [.room(roomID), .colorWheel(roomID)]
         default: break

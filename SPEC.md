@@ -30,11 +30,12 @@ The watch calls the bridge's local CLIP API v2 over HTTPS on home Wi-Fi; nothing
 
 ## Screens and navigation
 
-Every screen fits one watch screen without scrolling. The one exception is the grid with 10 or more rooms.
+Every screen fits one watch screen without scrolling. The exceptions are the grid with 10 or more rooms, the Color screen, Arrange (down to the hidden rooms), Saved lights (its list) and the Log.
 
 | Screen | Reached from | What it holds |
 | --- | --- | --- |
-| Rooms grid (home) | App launch | All-off button left of the clock, a gear to Settings right of it, the title "Lights" centered under the time, and one tile per room |
+| Rooms grid (home) | App launch | A bookmark button to Saved lights left of the clock, a gear to Settings right of it, the title "Lights" centered under the time, and one tile per shown room |
+| Saved lights | Grid › bookmark | Back button left of the clock, title "Saved lights". **Save current lights** at the top (asks for a name), then the saved configurations, newest first, in a scrolling list. Tap one to load it and go back to the grid. Each row has a pencil (rename) and a save-over button (replace its lights with the current ones, after a confirmation); swipe left to delete |
 | Room | Hold a tile 0.5 s | Back arrow + room name; a top row with the on/off button, brightness % and a brightness bar; a Warmth slider; a Color wheel row; the default-color card |
 | Color wheel | Room › Color wheel | Back button and a pin button either side of the clock, the largest wheel that fits, and saved colors below it. Brightness is set on the Room screen; the Crown scrolls here |
 | Settings | Grid › gear | Arrange rooms, Remote scenes, Bridge. Back from Settings, Arrange or Bridge goes straight to the grid |
@@ -50,7 +51,12 @@ Every screen fits one watch screen without scrolling. The one exception is the g
 - **Live updates backup:** while the app is open it also reads the lights' state (quietly, logging only failures), so remotes, switches and the Hue app show up even if the event stream isn't delivering: every 3 seconds while the stream is down or hasn't delivered anything, every 20 seconds while it is delivering updates (it drops back to 3 seconds as soon as the stream drops). The log notes the first update each event-stream connection receives.
 - **Live updates while tapping:** for two seconds after the app changes a room, its own state wins over live updates for that room (the bridge can echo older or in-between states); the newest update is applied once that time is up.
 - **Tap** a tile to toggle that room. **Hold** it 0.5 s to open its Room screen; a hold never also toggles.
-- **All off:** one command to the bridge's all-lights group (`bridge_home`'s `grouped_light`), not one per tile. While any room is hidden, it sends one command per shown room instead, so hidden rooms stay as they are.
+- **No All off button:** its place left of the clock is the Saved lights bookmark. Save an "all off" configuration to get the same thing.
+
+**Saved lights (whole-house configurations)**
+
+- Saving records every room shown on the grid (hidden rooms are neither saved nor changed): whether it's on, each light's on/off, brightness and color, and the hybrid and temporary color the app had for it. Names are trimmed and at most 40 characters. Configurations are kept on the watch (App Group), not on the bridge.
+- Loading turns rooms saved as off off (one command each), and for each lit room writes its saved lights into its "House Lights Mix" working scene and recalls it: one write and one recall per room puts every light back exactly, and a moving hybrid keeps moving (a still configuration writes an empty palette so an old movement stops). The grid shows the result at once. The rooms' hybrids and temporary colors become what was saved, pending defaults and mixes are cleared, and remote ("Now") scenes are kept in step. Rooms no longer on the bridge are skipped.
 - **Placement:** rooms sit where Arrange put them: any spot on the grid, including half-way between two columns, with gaps kept (nothing packs towards the top left). Until arranged, rooms fill the grid in order. New rooms from the bridge go to the first free spot.
 
 **Arrange drag rules** (to prevent the fighting seen in Closing Time)
@@ -64,7 +70,7 @@ Arrange uses the rows that fit the screen (two for one to four rooms, three othe
 
 Once a slot is the target, it stays the target while the finger is anywhere on that slot, so a held tile always makes room after ~150 ms. With more than nine rooms the Arrange tiles shrink so the grid always fits the first screen.
 
-**Hidden rooms.** Under the Arrange grid, on the first screen, is a Hidden rooms box. Dragging a room onto it (the box lights up amber, with a tap) and letting go hides the room: it leaves the grid, its spot is left empty and the other rooms stay where they were before the drag. Arrange scrolls (Crown, or a drag outside the grid) to the hidden rooms, three across with their names; holding one for 0.5 s puts it back on the grid in the first free spot. Because Arrange scrolls, it uses the system bar like the Color screen (back button left, clock and title centered); Back still goes straight to the grid. Hidden rooms are kept on the watch (App Group). The grid's Crown and All off leave them alone; Siri, the widget and Remote scenes still list them.
+**Hidden rooms.** Under the Arrange grid, on the first screen, is a Hidden rooms box. Dragging a room onto it (the box lights up amber, with a tap) and letting go hides the room: it leaves the grid, its spot is left empty and the other rooms stay where they were before the drag. Arrange scrolls (Crown, or a drag outside the grid) to the hidden rooms, three across with their names; holding one for 0.5 s puts it back on the grid in the first free spot. Because Arrange scrolls, it uses the system bar like the Color screen (back button left, clock and title centered); Back still goes straight to the grid. Hidden rooms are kept on the watch (App Group). The grid's Crown and saved configurations leave them alone; Siri, the widget and Remote scenes still list them.
 
 Arrange tiles look like the grid's current state: lit rooms in their color, off rooms dark gray. They show icons only.
 
@@ -75,7 +81,7 @@ Arrange tiles look like the grid's current state: lit rooms in their color, off 
 - **Rooms that are on:** one Crown step adds the same amount (5 points) to every room that's on, so differences are kept (70% and 40% become 75% and 45%). Rooms that are off are untouched.
 - **Rooms only:** the Crown changes rooms, never zones.
 - **Limits:** each room stops at 100%. A room that reaches 0% turns off.
-- **Back on at 0%:** tapping a room that was dimmed to 0% (Crown or slider) turns it on at 70%. A room switched off any other way (tap, all off, a remote) comes back at its own last brightness, and an off room keeps showing that level even though the bridge reports 0 for it.
+- **Back on at 0%:** tapping a room that was dimmed to 0% (Crown or slider) turns it on at 70%. A room switched off any other way (tap, a saved configuration, a remote) comes back at its own last brightness, and an off room keeps showing that level even though the bridge reports 0 for it.
 - **Feedback:** a small pill ("Brighter · 4 on" or "Dimmer · 4 on") shows briefly over the top of the grid while turning. The Crown's scroll indicator is hidden.
 - **Scrolling:** with 10 or more rooms the Crown still only changes brightness; the grid scrolls by dragging.
 
@@ -108,7 +114,7 @@ Arrange tiles look like the grid's current state: lit rooms in their color, off 
 
 - Settings › Remote scenes shows the rooms as tiles; tap the rooms that have a dimmer switch. Each gets a bridge scene **"House Lights Now – \<room\>"**, created from the room's current look.
 - After every color, warmth or brightness change the watch makes in that room, the scene is rewritten with the new look, about 1.5 s after the room is left alone (one request; the lights themselves change first, as always). Back to default copies the default into it.
-- Turning a room off with a tap or All off never changes the scene: it always means "on", at 1% or more. Dimming a room to 0% with the Crown or slider saves it at 70%, so the remote brings it back at 70% (as a tap in the app does).
+- Turning a room off with a tap or a saved configuration never changes the scene: it always means "on", at 1% or more. Dimming a room to 0% with the Crown or slider saves it at 70%, so the remote brings it back at 70% (as a tap in the app does).
 - In the Hue app, set each dimmer's On button to its room's "House Lights Now" scene; the remote then turns the room on in whatever the watch last set. The real default stays in "House Lights – \<room\>".
 - Changes made with the Hue app or the remote's dim buttons don't update the scene.
 - Turning a room's tile off on this screen stops updating its scene but leaves the scene on the bridge (a remote may still use it).
@@ -160,7 +166,7 @@ The bridge is the source of truth for rooms and light state; the watch keeps onl
 | Which rooms are temporary | App Group UserDefaults | Cleared by Back to default or a color change from outside |
 | Last-known room states | App Group UserDefaults | For the widget and a fast first paint |
 | Room defaults | Bridge scenes "House Lights – \<room>" | Not on the watch |
-| Saved colors, hybrids (colors, moving, speed), remote rooms, hidden rooms | App Group UserDefaults | Hybrids saved without a speed load as Slow |
+| Saved colors, hybrids (colors, moving, speed), remote rooms, hidden rooms, saved configurations | App Group UserDefaults | Hybrids saved without a speed load as Slow |
 | Saved bridge replies | App Group folder, bridge-replies.json | Only when Save bridge replies is tapped; deleted after 7 days |
 
 ## Out of scope for v1
@@ -175,7 +181,7 @@ Eight milestones, each built cleanly in the simulator and committed before the n
 
 1. **Bridge layer:** HTTPS client with certificate trust for the saved IP, pairing, the Keychain key, reading rooms, zones and grouped lights, sending commands through a once-a-second-per-room sender, and the event stream. Plus a Bridge log screen recording every request and error, for the first home test.
 2. **Bridge and offline screens:** Settings, the Bridge (pair) screen, Bridge not reachable, and first-launch routing.
-3. **Rooms grid:** tiles with archetype icons, the 2×2 / 3×3 / scrolling sizes, tap to toggle, hold for the Room screen, all off, live updates from the event stream, and the Crown brightness rules.
+3. **Rooms grid:** tiles with archetype icons, the 2×2 / 3×3 / scrolling sizes, tap to toggle, hold for the Room screen, live updates from the event stream, and the Crown brightness rules.
 4. **Room and Color wheel screens:** brightness, on/off, Warmth, and the wheel with CIE xy conversion and gamut clamping.
 5. **Temporary colors and defaults:** the per-room default scenes, the Temporary color card, Back to default and Set as default.
 6. **Arrange:** drag-to-reorder with the four drag rules, and the saved order.

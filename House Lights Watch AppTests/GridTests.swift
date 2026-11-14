@@ -81,13 +81,6 @@ struct ControlTests {
         #expect(!app.store.zeroDimmed.contains("mock-room-0"))
     }
 
-    @Test func allOffUsesTheAllLightsGroup() async throws {
-        let (app, mock) = await ready()
-        app.allOff()
-        #expect(app.rooms.allSatisfy { !$0.isOn })
-        #expect(await eventually { await mock.currentHome.lights.values.allSatisfy { !$0.isOn } })
-    }
-
     @Test func crownKeepsDifferencesBetweenRooms() async {
         let (app, _) = await ready()
         app.crownStep(1)

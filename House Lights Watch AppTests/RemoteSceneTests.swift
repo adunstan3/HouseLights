@@ -54,13 +54,12 @@ struct RemoteSceneTests {
         #expect(light?.isOn == true && light?.color == .temperature(mirek: 200) && light?.brightness == 40)
     }
 
-    /// Turning a room off (tap, All off, or dimming to 0%) never saves "off" or 0% into the scene.
+    /// Turning a room off (tap, or dimming to 0%) never saves "off" or 0% into the scene.
     @Test func turningOffNeverSavesZero() async throws {
         let (app, mock) = await ready()
         app.setRemoteScene("mock-room-0", enabled: true)                   // 70%
         #expect(await eventually { await remoteScene(mock, "mock-room-0") != nil })
         app.toggle("mock-room-0")
-        app.allOff()
         try await Task.sleep(for: .milliseconds(1100))
         app.toggle("mock-room-0")
         try await Task.sleep(for: .milliseconds(1100))

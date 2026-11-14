@@ -30,6 +30,7 @@ It's a personal project, installed through TestFlight.
   - [Defaults and temporary colors](#defaults-and-temporary-colors)
   - [Remote scenes](#remote-scenes)
   - [Arrange](#arrange)
+  - [Saved lights](#saved-lights)
   - [Pairing with the bridge](#pairing-with-the-bridge)
   - [Bridge not reachable](#bridge-not-reachable)
   - [Bridge log](#bridge-log)
@@ -67,8 +68,8 @@ fallback. Zones aren't shown.
   dimmed to 0% turns off, and a tap brings it back at 70%. A pill shows
   "Brighter · 4 on" while you turn. With 10+ rooms the Crown still only changes
   brightness.
-- **All off** (left of the clock) turns every light off with one command; the gear (right
-  of the clock) opens Settings.
+- **Bookmark** (left of the clock) opens Saved lights; the gear (right of the clock) opens
+  Settings.
 - **Live:** changes made in the Hue app, with a switch or a remote show up within a second
   through the bridge's event stream. A quiet backup read runs every 3 seconds while the
   stream is silent or down, and every 20 seconds while the stream is delivering updates.
@@ -161,8 +162,23 @@ bridge go to the first free spot. Back from Settings or Arrange goes straight to
 
 **Hidden rooms.** Drag a room down onto the **Hidden rooms** box under the grid to take it
 off the grid (the others stay put). Scroll down to see the hidden rooms; hold one to put it
-back in the first free spot. The grid's Crown and All off leave hidden rooms alone; Siri,
+back in the first free spot. The grid's Crown and saved configurations leave hidden rooms alone; Siri,
 the widget and Remote scenes still have them.
+
+### Saved lights
+
+<p>
+  <img src="docs/screenshots/configs.png" width="180" alt="Saved lights with Save current lights and three saved configurations">
+</p>
+
+The bookmark left of the clock opens **Saved lights**: whole-house configurations.
+**Save current lights** asks for a name and records every room on the grid, light by light
+(on or off, brightness, color, and any hybrid). Tap a saved one to load it: the grid comes
+back with it at once, rooms saved off are turned off, and each lit room's lights are put
+back exactly through its "House Lights Mix" scene (a moving mix keeps moving). The pencil
+renames one; the save-over button replaces its lights with the current ones (after a
+confirmation); swipe left to delete. Hidden rooms are left out. There's no All off button
+any more: save an "all off" configuration instead.
 
 ### Pairing with the bridge
 
@@ -248,8 +264,7 @@ asked to unlock first.
 - **Pairing:** `POST /api` with `generateclientkey`; the application key goes in the
   Keychain.
 - **Reading:** `room`, `zone`, `grouped_light`, `light` and `scene` resources.
-- **Controlling:** rooms are switched through their `grouped_light`; "all off" uses the
-  bridge's all-lights group. A per-room sender sends at most one command a second and only
+- **Controlling:** rooms are switched through their `grouped_light`. A per-room sender sends at most one command a second and only
   the latest value.
 - **Live updates:** one `/eventstream/clip/v2` connection while the app is open,
   reconnecting if it drops. For two seconds after the app changes a room, the app's own
@@ -302,7 +317,8 @@ runs on the Mac at a time. A script that prints "Waiting for the shared build lo
 Debug launch arguments (simulator / debug builds):
 `-mockTiles 12`, `-unpaired YES`, `-mockOffline YES`, `-mockTemporary YES`,
 `-mockOutsideChanges YES`, `-mockSwatches YES`, `-scrollSwatches YES`, `-mockFreeLayout YES`, `-mockHybrid YES`,
-`-realBridge YES`, `-openScreen settings|bridge|log|arrange|room|wheel`,
+`-mockHidden YES` (Bathroom hidden), `-mockConfigs YES` (three saved configurations),
+`-realBridge YES`, `-openScreen settings|bridge|log|arrange|configs|room|wheel`,
 `-openRoom "Office"` (`-openScreen remotes` opens Remote scenes).
 
 ### Releasing through TestFlight

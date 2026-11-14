@@ -69,32 +69,6 @@ extension AppModel {
         }
     }
 
-    /// The grid's all-off button: one command to the bridge's all-lights group, or, while
-    /// some rooms are hidden, one per shown room (hidden rooms are left as they are).
-    func allOff() {
-        let hiding = home.rooms.contains { $0.kind == .room && hiddenRooms.contains($0.id) }
-        let affected = Set(gridControlledRooms.map(\.id))
-        if hiding {
-            // A zone is turned off in the app only if none of its lights is in a hidden room.
-            let hiddenLights = Set(hiddenRoomList.flatMap(\.lightIDs))
-            for i in home.rooms.indices where affected.contains(home.rooms[i].id) {
-                if home.rooms[i].kind == .zone, !hiddenLights.isDisjoint(with: home.rooms[i].lightIDs) { continue }
-                home.rooms[i].isOn = false
-            }
-            for room in rooms { sender.enqueue(.power(false), to: room.groupedLightID) }
-        } else {
-            for i in home.rooms.indices { home.rooms[i].isOn = false }
-            if let all = home.allLightsGroupID {
-                sender.enqueue(.power(false), to: all)
-            } else {
-                for room in home.rooms where room.kind == .room { sender.enqueue(.power(false), to: room.groupedLightID) }
-            }
-        }
-        let now = Date()
-        for room in home.rooms where affected.contains(room.id) { lastLocalChange[room.id] = now }
-        store.lastKnownRooms = home.rooms
-    }
-
     /// Arrange: moves a room off the grid into Hidden rooms. `arrangement` is the grid as it
     /// was before the drag; the room's spot is freed and the others stay where they were.
     func hideRoom(_ id: String, from arrangement: GridArrangement) {

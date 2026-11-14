@@ -1,6 +1,7 @@
 import SwiftUI
 
-/// The Rooms grid (home): title, all-off and Settings buttons, one tile per room and zone.
+/// The Rooms grid (home): title, Saved lights (bookmark) and Settings buttons, one tile per
+/// room shown (hidden rooms aren't).
 /// Tap toggles; a 0.5 s hold opens the Room screen. The Crown brightens or dims every
 /// room that's on. With 10+ rooms the grid scrolls by dragging; the Crown never scrolls it.
 struct GridView: View {
@@ -28,12 +29,12 @@ struct GridView: View {
         // System toolbar buttons sit in the top corners with the clock between them.
         .toolbar {
             ToolbarItem(placement: .topBarLeading) {
-                Button(action: app.allOff) {
-                    Image(systemName: "power").font(.system(size: 15, weight: .bold)).foregroundStyle(.black)
+                Button { router.push(.configs) } label: {
+                    Image(systemName: "bookmark.fill").font(.system(size: 15, weight: .bold)).foregroundStyle(.white)
                 }
-                .tint(.white)
-                .accessibilityLabel("All off")
-                .accessibilityIdentifier("allOff")
+                .tint(Theme.secondaryButton)
+                .accessibilityLabel("Saved lights")
+                .accessibilityIdentifier("configs")
             }
             ToolbarItem(placement: .topBarTrailing) {
                 Button { router.push(.settings) } label: {

@@ -47,8 +47,19 @@ extension AppModel {
 
     /// Writes the room's mix scene (creating it the first time) and, if `recall`, shows it.
     func writeMixScene(_ roomID: String, hybrid: Hybrid, recall: Bool) async {
-        guard let client, let room = room(roomID) else { return }
+        guard let room = room(roomID) else { return }
         let (actions, motion) = mixScene(for: room, hybrid: hybrid)
+        await writeMix(roomID, actions: actions, motion: motion,
+                       recall: recall ? .init(brightness: room.brightness >= 1 ? room.brightness : nil, dynamic: hybrid.moving) : nil)
+    }
+
+    struct MixRecall { var brightness: Double?; var dynamic: Bool }
+
+    /// Writes these actions (and palette) into the room's "House Lights Mix" working scene,
+    /// creating it the first time, then recalls it if asked. Hybrids and loading a saved
+    /// configuration both show their per-light colors this way.
+    func writeMix(_ roomID: String, actions: [HueSceneAction], motion: SceneMotion, recall: MixRecall?) async {
+        guard let client, let room = room(roomID) else { return }
         do {
             let id: String
             if let existing = home.mixScenes[roomID], !existing.id.isEmpty {
@@ -62,13 +73,13 @@ extension AppModel {
             var scene = DefaultScene(id: id, roomID: roomID, name: DefaultScene.mixName(for: room.name), actions: actions)
             scene.apply(motion)
             home.mixScenes[roomID] = scene
-            if recall, !Task.isCancelled {
+            if let recall, !Task.isCancelled {
                 lastLocalChange[roomID] = Date()
-                try await client.recallScene(id: id, brightness: room.brightness >= 1 ? room.brightness : nil, dynamic: hybrid.moving)
+                try await client.recallScene(id: id, brightness: recall.brightness, dynamic: recall.dynamic)
             }
         } catch {
             fail(error)
-            log.add(.error, "Hybrid for \(room.name): \(error.localizedDescription)")
+            log.add(.error, "Mix scene for \(room.name): \(error.localizedDescription)")
         }
     }
 

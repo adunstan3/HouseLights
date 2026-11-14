@@ -8,7 +8,7 @@ nonisolated struct SharedStore: @unchecked Sendable {
     init(defaults: UserDefaults = AppGroup.defaults) { self.defaults = defaults }
 
     private enum Key: String {
-        case bridgeIP, gridOrder, temporaryRooms, pendingDefaults, zeroDimmed, lastKnownRooms, gridArrangement, remoteRooms, hybrids, pendingMix, hiddenRooms
+        case bridgeIP, gridOrder, temporaryRooms, pendingDefaults, zeroDimmed, lastKnownRooms, gridArrangement, remoteRooms, hybrids, pendingMix, hiddenRooms, houseConfigs
     }
 
     var bridgeIP: String? {
@@ -45,6 +45,12 @@ nonisolated struct SharedStore: @unchecked Sendable {
     var hiddenRooms: Set<String> {
         get { Set(defaults.stringArray(forKey: Key.hiddenRooms.rawValue) ?? []) }
         nonmutating set { defaults.set(Array(newValue).sorted(), forKey: Key.hiddenRooms.rawValue) }
+    }
+
+    /// Saved whole-house configurations, newest first (the app only).
+    var houseConfigs: [HouseConfig] {
+        get { decode(Key.houseConfigs) ?? [] }
+        nonmutating set { encode(newValue, Key.houseConfigs) }
     }
 
     var pendingMix: Set<String> {

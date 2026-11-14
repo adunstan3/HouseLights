@@ -79,6 +79,21 @@ struct BridgeEnvironment {
             // The sixth room is hidden from the grid (Arrange › Hidden rooms).
             store.hiddenRooms = ["mock-room-5"]
         }
+        if RuntimeEnvironment.flag("mockConfigs") {
+            // Two saved configurations made from the sample home.
+            let rooms = home.rooms.filter { $0.kind == .room }
+            func config(_ name: String, on: Set<String>) -> HouseConfig {
+                HouseConfig(name: name, savedAt: .now, rooms: rooms.map { room in
+                    let lights = home.lights(in: room).map { light -> LightSetting in
+                        var s = LightSetting(light); s.isOn = on.contains(room.id); return s
+                    }
+                    return RoomConfig(roomID: room.id, roomName: room.name, isOn: on.contains(room.id), lights: lights)
+                })
+            }
+            store.houseConfigs = [config("Movie night", on: ["mock-room-0"]),
+                                  config("Everything off", on: []),
+                                  config("Morning", on: ["mock-room-0", "mock-room-1", "mock-room-5"])]
+        }
         if RuntimeEnvironment.flag("mockSwatches") {
             store.savedSwatches = [(0.0, 1.0), (0.08, 0.9), (0.15, 0.75), (0.33, 0.8), (0.5, 0.6), (0.62, 0.85), (0.8, 0.7), (0.92, 0.5), (0.1, 0.35)]
                 .map { SavedSwatch(hue: $0.0, saturation: $0.1) }

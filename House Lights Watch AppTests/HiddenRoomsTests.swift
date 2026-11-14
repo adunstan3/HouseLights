@@ -2,7 +2,7 @@ import Foundation
 import Testing
 @testable import House_Lights_Watch_App
 
-/// Arrange › Hidden rooms: hidden rooms leave the grid, the Crown and All off, and come back
+/// Arrange › Hidden rooms: hidden rooms leave the grid, the Crown and saved configurations, and come back
 /// in the first free spot.
 @MainActor
 struct HiddenRoomsTests {
@@ -35,17 +35,21 @@ struct HiddenRoomsTests {
         #expect(app.savedArrangement?.slots[living] != nil)   // saved there
     }
 
-    @Test func crownAndAllOffLeaveHiddenRoomsAlone() async {
+    @Test func crownAndConfigurationsLeaveHiddenRoomsAlone() async {
         let (app, mock) = await ready()
         let kitchen = "mock-room-1"                     // on, 100%
         app.hideRoom(kitchen, from: app.arrangement)
         app.crownStep(-2)
         #expect(app.room(kitchen)?.brightness == 100)
-        app.allOff()
-        #expect(app.room(kitchen)?.isOn == true)
+        let config = try! #require(app.saveConfig(named: "Test"))
+        #expect(!config.rooms.contains { $0.roomID == kitchen })   // not saved
+        var allOff = config
+        allOff.rooms = allOff.rooms.map { var r = $0; r.isOn = false; return r }
+        app.houseConfigs = [allOff]
+        app.loadConfig(allOff.id)
         #expect(app.room("mock-room-0")?.isOn == false)
         #expect(await eventually { await mock.currentHome.room("mock-room-0")?.isOn == false })
-        #expect(await mock.currentHome.room(kitchen)?.isOn == true)
+        #expect(await mock.currentHome.room(kitchen)?.isOn == true)  // not changed
     }
 
     @Test func hiddenRoomsAreKeptAcrossLaunches() async {
