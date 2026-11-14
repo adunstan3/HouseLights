@@ -71,6 +71,7 @@ final class AppModel {
         hybrids = store.hybrids
         pendingMix = store.pendingMix
         savedArrangement = store.gridArrangement
+        hiddenRooms = store.hiddenRooms
     }
 
     /// The user's grid order (room ids), kept here so the grid redraws when Arrange changes it.
@@ -93,17 +94,33 @@ final class AppModel {
     /// Colors pinned on the Color wheel screen (newest first), shared by every room.
     var savedSwatches: [SavedSwatch] = [] { didSet { store.savedSwatches = savedSwatches } }
 
+    /// Rooms hidden from the grid (dragged to Hidden rooms in Arrange). The grid, the Crown
+    /// and All off leave them alone; Siri and the widget still reach them.
+    var hiddenRooms: Set<String> = [] { didSet { store.hiddenRooms = hiddenRooms } }
+
     /// Where each room sits on the grid (saved by Arrange; nil until then).
     var savedArrangement: GridArrangement? { didSet { store.gridArrangement = savedArrangement } }
 
     /// The grid's arrangement: saved spots kept, new rooms in the first free spot.
     var arrangement: GridArrangement {
-        let ids = GridOrder.apply(gridOrder, to: home.rooms.filter { $0.kind == .room }).map(\.id)
+        let ids = GridOrder.apply(gridOrder, to: home.rooms.filter { $0.kind == .room && !hiddenRooms.contains($0.id) }).map(\.id)
         return GridArrangement.make(roomIDs: ids, saved: savedArrangement)
     }
 
-    /// The grid's tiles: Hue rooms (not zones), top-left to bottom-right.
+    /// The grid's tiles: Hue rooms (not zones, not hidden), top-left to bottom-right.
     var rooms: [Room] { arrangement.readingOrder.compactMap { home.room($0) } }
+
+    /// Hidden rooms that are still on the bridge, by name.
+    var hiddenRoomList: [Room] {
+        home.rooms.filter { $0.kind == .room && hiddenRooms.contains($0.id) }
+            .sorted { $0.name.localizedStandardCompare($1.name) == .orderedAscending }
+    }
+
+    /// Every room: the grid's, then the hidden ones (Settings lists that aren't the grid).
+    var allRooms: [Room] { rooms + hiddenRoomList }
+
+    /// What the grid's Crown and All off act on: rooms and zones, less the hidden rooms.
+    var gridControlledRooms: [Room] { home.rooms.filter { !hiddenRooms.contains($0.id) } }
 
     var isActive = false
 

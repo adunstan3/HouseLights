@@ -38,19 +38,19 @@ Every screen fits one watch screen without scrolling. The one exception is the g
 | Room | Hold a tile 0.5 s | Back arrow + room name; a top row with the on/off button, brightness % and a brightness bar; a Warmth slider; a Color wheel row; the default-color card |
 | Color wheel | Room › Color wheel | Back button and a pin button either side of the clock, the largest wheel that fits, and saved colors below it. Brightness is set on the Room screen; the Crown scrolls here |
 | Settings | Grid › gear | Arrange rooms, Remote scenes, Bridge. Back from Settings, Arrange or Bridge goes straight to the grid |
-| Arrange | Settings › Arrange rooms | The same icon grid with every empty spot outlined; drag a room to any spot, and nothing here changes lights |
+| Arrange | Settings › Arrange rooms | The same icon grid with every empty spot outlined; drag a room to any spot, and nothing here changes lights. Under the grid, Hidden rooms: drag a room onto it to hide it; scroll down and hold a hidden room to put it back |
 | Bridge (pair) | First launch, or Settings › Bridge | IP field, the press-the-button instruction, Pair; then Paired and Show rooms |
 | Bridge not reachable | Any time the bridge doesn't answer | Message, Try again, Bridge settings |
 
 **Rooms grid**
 
-- **Size:** shows every room on the bridge, with none hidden. Zones are not shown on the grid or in Arrange (they're still available to Siri and the widget). 1–4 tiles = two across (big tiles); 5–9 = three across; 10 or more = three across, scrolled by dragging. Never four across. Tiles are as large as the rows in use allow, so 5–6 rooms fill the screen's width.
+- **Size:** shows every room on the bridge except the ones hidden in Arrange. Zones are not shown on the grid or in Arrange (they're still available to Siri and the widget). 1–4 tiles = two across (big tiles); 5–9 = three across; 10 or more = three across, scrolled by dragging. Never four across. Tiles are as large as the rows in use allow, so 5–6 rooms fill the screen's width.
 - **Tiles:** square, rounded. A lit tile fills with the room's current color, shows a dark icon and its brightness %. An off tile is dark gray and says Off.
 - **Icons:** chosen from each room's Hue archetype (sofa for living room, frying pan for kitchen (SF Symbols has no chef's hat), bed, monitor for office, door for front door, house for zones, and so on), with a bulb as the fallback. No name labels by default.
 - **Live updates backup:** while the app is open it also reads the lights' state (quietly, logging only failures), so remotes, switches and the Hue app show up even if the event stream isn't delivering: every 3 seconds while the stream is down or hasn't delivered anything, every 20 seconds while it is delivering updates (it drops back to 3 seconds as soon as the stream drops). The log notes the first update each event-stream connection receives.
 - **Live updates while tapping:** for two seconds after the app changes a room, its own state wins over live updates for that room (the bridge can echo older or in-between states); the newest update is applied once that time is up.
 - **Tap** a tile to toggle that room. **Hold** it 0.5 s to open its Room screen; a hold never also toggles.
-- **All off:** one command to the bridge's all-lights group (`bridge_home`'s `grouped_light`), not one per tile.
+- **All off:** one command to the bridge's all-lights group (`bridge_home`'s `grouped_light`), not one per tile. While any room is hidden, it sends one command per shown room instead, so hidden rooms stay as they are.
 - **Placement:** rooms sit where Arrange put them: any spot on the grid, including half-way between two columns, with gaps kept (nothing packs towards the top left). Until arranged, rooms fill the grid in order. New rooms from the bridge go to the first free spot.
 
 **Arrange drag rules** (to prevent the fighting seen in Closing Time)
@@ -62,7 +62,9 @@ Every screen fits one watch screen without scrolling. The one exception is the g
 
 Arrange uses the rows that fit the screen (two for one to four rooms, three otherwise), adding a row only when nothing else is free.
 
-Once a slot is the target, it stays the target while the finger is anywhere on that slot, so a held tile always makes room after ~150 ms. With more than nine rooms the Arrange tiles shrink so it never scrolls.
+Once a slot is the target, it stays the target while the finger is anywhere on that slot, so a held tile always makes room after ~150 ms. With more than nine rooms the Arrange tiles shrink so the grid always fits the first screen.
+
+**Hidden rooms.** Under the Arrange grid, on the first screen, is a Hidden rooms box. Dragging a room onto it (the box lights up amber, with a tap) and letting go hides the room: it leaves the grid, its spot is left empty and the other rooms stay where they were before the drag. Arrange scrolls (Crown, or a drag outside the grid) to the hidden rooms, three across with their names; holding one for 0.5 s puts it back on the grid in the first free spot. Because Arrange scrolls, it uses the system bar like the Color screen (back button left, clock and title centered); Back still goes straight to the grid. Hidden rooms are kept on the watch (App Group). The grid's Crown and All off leave them alone; Siri, the widget and Remote scenes still list them.
 
 Arrange tiles look like the grid's current state: lit rooms in their color, off rooms dark gray. They show icons only.
 
@@ -158,7 +160,7 @@ The bridge is the source of truth for rooms and light state; the watch keeps onl
 | Which rooms are temporary | App Group UserDefaults | Cleared by Back to default or a color change from outside |
 | Last-known room states | App Group UserDefaults | For the widget and a fast first paint |
 | Room defaults | Bridge scenes "House Lights – \<room>" | Not on the watch |
-| Saved colors, hybrids (colors, moving, speed), remote rooms | App Group UserDefaults | Hybrids saved without a speed load as Slow |
+| Saved colors, hybrids (colors, moving, speed), remote rooms, hidden rooms | App Group UserDefaults | Hybrids saved without a speed load as Slow |
 | Saved bridge replies | App Group folder, bridge-replies.json | Only when Save bridge replies is tapped; deleted after 7 days |
 
 ## Out of scope for v1

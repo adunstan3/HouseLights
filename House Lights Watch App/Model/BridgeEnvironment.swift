@@ -75,6 +75,10 @@ struct BridgeEnvironment {
                 "mock-room-2": Slot(row: 1, half: 0), "mock-room-3": Slot(row: 1, half: 3),
                 "mock-room-4": Slot(row: 2, half: 0), "mock-room-5": Slot(row: 2, half: 4)])
         }
+        if RuntimeEnvironment.flag("mockHidden") {
+            // The sixth room is hidden from the grid (Arrange › Hidden rooms).
+            store.hiddenRooms = ["mock-room-5"]
+        }
         if RuntimeEnvironment.flag("mockSwatches") {
             store.savedSwatches = [(0.0, 1.0), (0.08, 0.9), (0.15, 0.75), (0.33, 0.8), (0.5, 0.6), (0.62, 0.85), (0.8, 0.7), (0.92, 0.5), (0.1, 0.35)]
                 .map { SavedSwatch(hue: $0.0, saturation: $0.1) }

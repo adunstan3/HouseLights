@@ -10,7 +10,7 @@ struct RemoteScenesView: View {
         Screen(title: "Remote scenes") {
             GeometryReader { geo in
                 VStack(spacing: 6) {
-                    let rooms = app.rooms
+                    let rooms = app.allRooms   // hidden rooms can still have a dimmer
                     let layout = GridLayout.fitting(count: rooms.count, rows: GridArrangement.baseRows(for: rooms.count),
                                                     width: geo.size.width, height: geo.size.height - Self.captionHeight)
                     LazyVGrid(columns: Array(repeating: GridItem(.fixed(layout.tile), spacing: layout.spacing), count: layout.columns),

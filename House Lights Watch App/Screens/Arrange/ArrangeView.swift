@@ -1,36 +1,142 @@
 import SwiftUI
+import WatchKit
 
 /// Arrange (mockups/6-arrange.png): the same icon grid, in the rooms' current state. Drag a
 /// room to any spot — including half-way between columns — and the rooms in the way slide
 /// to the nearest free spot. Nothing here changes lights. See ArrangeDrag for the rules.
+/// Under the grid is Hidden rooms: drag a room down onto it to hide it from the grid. Scroll
+/// down (Crown or drag below the grid) to the hidden rooms; hold one to put it back on the
+/// grid in the first free spot.
 struct ArrangeView: View {
     @Environment(AppModel.self) private var app
     @State private var arrangement: GridArrangement?
     @State private var drag: ArrangeDrag?
+    /// The dragged room is over Hidden rooms: letting go hides it.
+    @State private var overHidden = false
 
+    @Environment(Router.self) private var router
+
+    // A scrolling screen, so it uses the system bar like the Color screen (a scroll view
+    // moves the clock to the middle, over a custom header). Back still goes to the grid.
     var body: some View {
-        Screen(title: "Arrange", backToGrid: true) {
-            GeometryReader { geo in
+        GeometryReader { geo in
+            ScrollView(.vertical, showsIndicators: false) {
                 VStack(spacing: 6) {
                     if let arrangement {
-                        grid(arrangement, in: CGSize(width: geo.size.width, height: geo.size.height - Self.captionHeight))
+                        grid(arrangement, in: CGSize(width: geo.size.width, height: geo.size.height - Self.dropZoneHeight - 6))
+                            .zIndex(1)   // the dragged tile draws over Hidden rooms
                     }
-                    Text("Drag a room to any spot. Lights don’t change here.")
-                        .font(.footnote)
-                        .foregroundStyle(Theme.secondaryText)
-                        .multilineTextAlignment(.center)
-                        .lineLimit(2)
-                        .minimumScaleFactor(0.8)
-                        .fixedSize(horizontal: false, vertical: true)
-                        .frame(maxWidth: .infinity)
+                    hiddenHeader
+                    hiddenList(width: geo.size.width)
                 }
+                .padding(.bottom, 24)
+            }
+            .scrollDisabled(drag != nil)
+        }
+        .padding(.horizontal, Metrics.sideMargin)
+        .background(Theme.background)
+        .ignoresSafeArea(edges: .bottom)
+        .navigationTitle("Arrange")
+        .navigationBarBackButtonHidden(true)
+        .toolbar {
+            ToolbarItem(placement: .topBarLeading) {
+                Button { router.popToRoot() } label: {
+                    Image(systemName: "chevron.left").font(.system(size: 15, weight: .bold)).foregroundStyle(.white)
+                }
+                .accessibilityLabel("Back")
+                .accessibilityIdentifier("back")
             }
         }
         .onAppear { arrangement = app.arrangement }
     }
 
-    /// Room kept under the grid for the two-line caption.
-    static let captionHeight: CGFloat = 46
+    /// Height of the Hidden rooms drop zone, which sits under the grid on the first screen.
+    static let dropZoneHeight: CGFloat = 40
+
+    private var hiddenHeader: some View {
+        VStack(spacing: 1) {
+            Text("Hidden rooms")
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundStyle(overHidden ? Theme.accent : .white)
+            Text(overHidden ? "Let go to hide it" : drag != nil ? "Drop here to hide" : "Drag a room here to hide it")
+                .font(.system(size: 11))
+                .foregroundStyle(Theme.secondaryText)
+        }
+        .lineLimit(1)
+        .minimumScaleFactor(0.8)
+        .frame(maxWidth: .infinity, minHeight: Self.dropZoneHeight)
+        .background {
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .strokeBorder(overHidden ? Theme.accent : Color(white: 0.3),
+                              style: StrokeStyle(lineWidth: overHidden ? 2 : 1, dash: overHidden ? [] : [4, 3]))
+        }
+        .accessibilityElement(children: .combine)
+        .accessibilityIdentifier("hiddenRooms")
+    }
+
+    @ViewBuilder
+    private func hiddenList(width: CGFloat) -> some View {
+        let hidden = app.hiddenRoomList
+        if !hidden.isEmpty {
+            let tile = floor((width - 2 * 8) / 3)
+            // Three across, built eagerly (a lazy grid leaves off-screen rooms out of the
+            // accessibility tree until scrolled to).
+            VStack(alignment: .leading, spacing: 8) {
+                ForEach(Array(stride(from: 0, to: hidden.count, by: 3)), id: \.self) { start in
+                    HStack(spacing: 8) {
+                        ForEach(hidden[start..<min(start + 3, hidden.count)]) { room in hiddenTile(room, size: tile) }
+                    }
+                }
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.top, 2)
+            Text("Hold a hidden room to put it back.")
+                .font(.footnote)
+                .foregroundStyle(Theme.secondaryText)
+                .multilineTextAlignment(.center)
+                .frame(maxWidth: .infinity)
+        }
+        Text("Lights don’t change here.")
+            .font(.footnote)
+            .foregroundStyle(Theme.secondaryText)
+            .frame(maxWidth: .infinity)
+    }
+
+    private func hiddenTile(_ room: Room, size: CGFloat) -> some View {
+        VStack(spacing: 2) {
+            RoomTile(room: room, size: size, showsLevel: false)
+                .opacity(0.7)
+            Text(room.name)
+                .font(.system(size: 11))
+                .foregroundStyle(Theme.secondaryText)
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
+        }
+        .frame(width: size)
+        .contentShape(Rectangle())
+        .onLongPressGesture(minimumDuration: 0.5) { show(room.id) }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(room.name)
+        .accessibilityHint("Hold to put it back on the grid")
+        .accessibilityAction(named: "Show on grid") { show(room.id) }
+        .accessibilityIdentifier("hidden-\(room.name)")
+    }
+
+    private func show(_ id: String) {
+        WKInterfaceDevice.current().play(.success)
+        withAnimation(.spring(duration: 0.25)) {
+            app.showRoom(id)
+            arrangement = app.arrangement
+        }
+    }
+
+    private func hide(_ id: String, from saved: GridArrangement) {
+        WKInterfaceDevice.current().play(.directionDown)
+        withAnimation(.spring(duration: 0.25)) {
+            app.hideRoom(id, from: saved)
+            arrangement = app.arrangement
+        }
+    }
 
     private func grid(_ saved: GridArrangement, in size: CGSize) -> some View {
         let count = saved.slots.count
@@ -70,6 +176,7 @@ struct ArrangeView: View {
                         .accessibilityAdjustableAction { direction in
                             move(id, by: direction == .increment ? 1 : -1, in: saved)
                         }
+                        .accessibilityAction(named: "Hide") { hide(id, from: saved) }
                 }
             }
         }
@@ -96,9 +203,21 @@ struct ArrangeView: View {
                 }
                 guard drag != nil else { return }
                 drag!.move(to: g.location, now: .now)
+                // Below the grid is the Hidden rooms drop zone.
+                let over = g.location.y > layout.height(rows: rows) + 3
+                if over != overHidden {
+                    overHidden = over
+                    if over { WKInterfaceDevice.current().play(.click) }
+                }
             }
             .onEnded { _ in
                 guard let finished = drag else { return }
+                if overHidden {
+                    overHidden = false
+                    drag = nil
+                    hide(finished.draggedID, from: finished.start)   // the others stay where they were
+                    return
+                }
                 withAnimation(.spring(duration: 0.25)) {
                     arrangement = finished.arrangement
                     drag = nil

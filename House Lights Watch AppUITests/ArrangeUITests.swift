@@ -88,3 +88,41 @@ final class NavigationUITests: XCTestCase {
         XCTAssertFalse(back.exists, "back from Arrange skips Settings")
     }
 }
+
+@MainActor
+final class HiddenRoomsUITests: XCTestCase {
+    override func setUp() async throws { continueAfterFailure = false }
+
+    /// Dragging a room onto Hidden rooms takes it off the grid.
+    func testDraggingARoomDownHidesIt() {
+        let app = XCUIApplication()
+        app.launchArguments = ["-uiTesting", "-openScreen", "arrange"]
+        app.launch()
+        let kitchen = app.descendants(matching: .any)["arrange-Kitchen"].firstMatch
+        let zone = app.descendants(matching: .any)["hiddenRooms"].firstMatch
+        XCTAssertTrue(kitchen.waitForExistence(timeout: 20))
+        kitchen.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
+            .press(forDuration: 0.2, thenDragTo: zone.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)),
+                   withVelocity: .slow, thenHoldForDuration: 0.3)
+        XCTAssertTrue(app.descendants(matching: .any)["hidden-Kitchen"].firstMatch.waitForExistence(timeout: 5))
+        XCTAssertFalse(kitchen.exists)
+        app.descendants(matching: .any)["back"].firstMatch.tap()
+        XCTAssertTrue(app.descendants(matching: .any)["tile-Living room"].firstMatch.waitForExistence(timeout: 5))
+        XCTAssertFalse(app.descendants(matching: .any)["tile-Kitchen"].firstMatch.exists)
+    }
+
+    /// Holding a hidden room puts it back on the grid.
+    func testHoldingAHiddenRoomShowsItAgain() {
+        let app = XCUIApplication()
+        app.launchArguments = ["-uiTesting", "-mockHidden", "YES", "-openScreen", "arrange"]
+        app.launch()
+        XCTAssertTrue(app.descendants(matching: .any)["arrange-Living room"].firstMatch.waitForExistence(timeout: 20))
+        XCTAssertFalse(app.descendants(matching: .any)["arrange-Bathroom"].firstMatch.exists)
+        let hidden = app.descendants(matching: .any)["hidden-Bathroom"].firstMatch
+        XCTAssertTrue(hidden.waitForExistence(timeout: 5))
+        if !hidden.isHittable { app.swipeUp() }
+        hidden.press(forDuration: 0.8)
+        XCTAssertTrue(app.descendants(matching: .any)["arrange-Bathroom"].firstMatch.waitForExistence(timeout: 5))
+        XCTAssertFalse(hidden.exists)
+    }
+}

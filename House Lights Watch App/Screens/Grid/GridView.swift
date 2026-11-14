@@ -81,7 +81,13 @@ struct GridView: View {
         .frame(width: layout.gridWidth, height: layout.height(rows: rows), alignment: .topLeading)
         .frame(maxWidth: .infinity)
 
-        if layout.scrolls {
+        if count == 0, !app.hiddenRoomList.isEmpty {
+            Text("Every room is hidden. Settings › Arrange rooms puts them back.")
+                .font(.footnote)
+                .foregroundStyle(Theme.secondaryText)
+                .multilineTextAlignment(.center)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+        } else if layout.scrolls {
             // Drag to scroll. The Crown is bound to brightness above, so it can't scroll this.
             ScrollView(.vertical, showsIndicators: false) { grid.padding(.bottom, 20) }
         } else {
@@ -94,7 +100,7 @@ struct GridView: View {
         guard steps != 0 else { return }
         appliedCrown += Double(steps)
         app.crownStep(steps)
-        pill = CrownPill(brighter: steps > 0, count: CrownBrightness.affected(app.home.rooms))
+        pill = CrownPill(brighter: steps > 0, count: CrownBrightness.affected(app.gridControlledRooms))
     }
 }
 

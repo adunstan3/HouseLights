@@ -8,7 +8,7 @@ nonisolated struct SharedStore: @unchecked Sendable {
     init(defaults: UserDefaults = AppGroup.defaults) { self.defaults = defaults }
 
     private enum Key: String {
-        case bridgeIP, gridOrder, temporaryRooms, pendingDefaults, zeroDimmed, lastKnownRooms, gridArrangement, remoteRooms, hybrids, pendingMix
+        case bridgeIP, gridOrder, temporaryRooms, pendingDefaults, zeroDimmed, lastKnownRooms, gridArrangement, remoteRooms, hybrids, pendingMix, hiddenRooms
     }
 
     var bridgeIP: String? {
@@ -41,6 +41,12 @@ nonisolated struct SharedStore: @unchecked Sendable {
     }
 
     /// Rooms whose hybrid was chosen while off.
+    /// Rooms hidden from the grid (Arrange › Hidden rooms). Siri and the widget still see them.
+    var hiddenRooms: Set<String> {
+        get { Set(defaults.stringArray(forKey: Key.hiddenRooms.rawValue) ?? []) }
+        nonmutating set { defaults.set(Array(newValue).sorted(), forKey: Key.hiddenRooms.rawValue) }
+    }
+
     var pendingMix: Set<String> {
         get { Set(defaults.stringArray(forKey: Key.pendingMix.rawValue) ?? []) }
         nonmutating set { defaults.set(Array(newValue).sorted(), forKey: Key.pendingMix.rawValue) }

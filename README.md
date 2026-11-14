@@ -159,6 +159,11 @@ becomes the target from its middle 60%, the others move aside after about 150 ms
 spot (and go back if you move on), and the layout is saved on release. New rooms from the
 bridge go to the first free spot. Back from Settings or Arrange goes straight to the grid.
 
+**Hidden rooms.** Drag a room down onto the **Hidden rooms** box under the grid to take it
+off the grid (the others stay put). Scroll down to see the hidden rooms; hold one to put it
+back in the first free spot. The grid's Crown and All off leave hidden rooms alone; Siri,
+the widget and Remote scenes still have them.
+
 ### Pairing with the bridge
 
 <p>
