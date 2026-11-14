@@ -107,7 +107,8 @@ on **Moving** and the bridge slowly morphs the lights between the colors (a Hue 
 scene, so it keeps going after you put the watch away); it's forced on when you pick more
 colors than the room has bulbs. While Moving is on, **Slow / Medium / Fast** sets how quickly
 the bridge morphs (0.25, 0.5 and 0.8 on the bridge's 0–1 scale). The room's tile blends the
-colors; a moving hybrid's tile and Room-screen power button slowly drift through them
+colors; a moving hybrid's tile, Room-screen power button and Set as default button (and
+Back to default, when the default is a moving hybrid) slowly drift through them
 (still, with Reduce Motion on). The Room screen's warmth label reads **Mix** or
 **Mix · moving**. A hybrid picked for a room that's off waits for the next turn-on, from the
 app, the widget or Siri. Set as default saves a hybrid as the room's default, moving and

@@ -106,9 +106,11 @@ extension AppModel {
     }
 
     /// The colors a lit, moving room's tile and power button drift through: its hybrid's, a
-    /// moving default's palette, or whatever its bulbs show. nil when off or still.
+    /// moving default's palette, or whatever its bulbs show. nil when off or still. Moving
+    /// means the bridge says its lights are playing a palette, or the app set a moving hybrid
+    /// there (in case the bridge's report is late or missing).
     func movingColors(_ room: Room) -> [Color]? {
-        guard room.isOn, room.isMoving == true else { return nil }
+        guard room.isOn, room.isMoving == true || hybrids[room.id]?.moving == true else { return nil }
         let colors: [LightColor]
         if let hybrid = hybrids[room.id] {
             colors = hybrid.colors.map { .xy($0.xy(in: room.gamut)) }
@@ -118,6 +120,12 @@ extension AppModel {
             colors = room.colors
         }
         return colors.count >= 2 ? colors.map(\.tileColor) : nil
+    }
+
+    /// The colors Back to default drifts through when the room's default is a moving hybrid.
+    func movingDefaultColors(_ roomID: String) -> [Color]? {
+        guard let scene = defaultScene(roomID), scene.autoDynamic, scene.palette.count >= 2 else { return nil }
+        return scene.palette.map { LightColor.xy($0).tileColor }
     }
 
     /// Whether the room's default scene shows the same colors.

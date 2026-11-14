@@ -160,4 +160,14 @@ struct HybridTests {
         app.setHybrid([red, blue], moving: true, roomID: "mock-room-0")
         #expect(app.room("mock-room-0").flatMap(app.movingColors)?.count == 2)
     }
+
+    @Test func setAsDefaultAndBackToDefaultDriftForAMovingHybrid() async {
+        let (app, mock) = await ready()
+        app.setHybrid([red, blue, green], moving: true, roomID: "mock-room-0")
+        #expect(app.room("mock-room-0").flatMap(app.movingColors)?.count == 3)        // Set as default
+        #expect(app.movingDefaultColors("mock-room-0") == nil)                           // the default is still one color
+        app.setAsDefault("mock-room-0")
+        #expect(await eventually { await mock.currentHome.defaults["mock-room-0"]?.autoDynamic == true })
+        #expect(app.movingDefaultColors("mock-room-0")?.count == 3)                      // Back to default
+    }
 }
