@@ -110,6 +110,7 @@ final class AppModel {
     // MARK: Connecting
 
     func start() async {
+        removeStaleBridgeReplies()
         switch environment.loadCredentials() {
         case .none:
             credentials = nil

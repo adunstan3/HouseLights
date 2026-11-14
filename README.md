@@ -194,7 +194,8 @@ by the clock sends the whole log as text (Messages or Mail). At the bottom of th
 - **Save bridge replies** reads the bridge's `room`, `zone`, `grouped_light`, `light`,
   `scene`, `device` and `bridge_home` lists exactly as sent and saves them as one JSON file
   (`bridge-replies.json` in the App Group folder), then offers **Share bridge replies**. The
-  replies hold no key or password.
+  replies hold no key or password, but they (and the shared log) list the home's room,
+  device and scene names, as a note on the screen says. The file is deleted after 7 days.
 - **Remove House Lights scenes** (after a confirmation) deletes every "House Lights…" scene
   on the bridge (defaults, "Now" and "Mix" scenes, including leftovers from renamed rooms)
   and forgets the defaults, hybrids and remote rooms. The lights stay as they are; a dimmer
@@ -227,7 +228,8 @@ Rooms (and zones) are known to Siri by their Hue names:
 Siri and the widget follow the app's rules: a default or hybrid waiting for turn-on is
 shown, a room dimmed to 0% comes back at 70%, a warmth replaces a hybrid, and a room with a
 remote scene has its "Now" scene updated too. If the bridge can't be reached, Siri says so
-plainly.
+plainly. Siri and the widget's toggles need an unlocked watch: on a locked watch you're
+asked to unlock first.
 
 ## How it talks to the bridge
 

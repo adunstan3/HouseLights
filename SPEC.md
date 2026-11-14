@@ -100,7 +100,7 @@ Arrange tiles look like the grid's current state: lit rooms in their color, off 
 
 **Errors**
 
-- No answer from the bridge (or a changed certificate or rejected key) shows Bridge not reachable. A change the bridge refuses shows a short notice for three seconds. Every request and error is in Settings › Bridge › Log. The Log screen also has: a share button (the log as text); **Save bridge replies** (the raw `room`, `zone`, `grouped_light`, `light`, `scene`, `device` and `bridge_home` lists saved as one JSON file, then shareable); and **Remove House Lights scenes** (after a confirmation, deletes every "House Lights…" scene on the bridge, including leftovers from renamed rooms, and forgets defaults, hybrids and remote rooms; lights are left as they are).
+- No answer from the bridge (or a changed certificate or rejected key) shows Bridge not reachable. A change the bridge refuses shows a short notice for three seconds. Every request and error is in Settings › Bridge › Log. The Log screen also has: a share button (the log as text); **Save bridge replies** (the raw `room`, `zone`, `grouped_light`, `light`, `scene`, `device` and `bridge_home` lists saved as one JSON file, then shareable; the file is deleted once it's more than 7 days old, checked at launch and when the Log opens); and **Remove House Lights scenes** (after a confirmation, deletes every "House Lights…" scene on the bridge, including leftovers from renamed rooms, and forgets defaults, hybrids and remote rooms; lights are left as they are). A note at the bottom says the shared log and replies list the home's room, device and scene names.
 
 **Remote scenes (Hue dimmer switches)**
 
@@ -135,6 +135,7 @@ Both run on the same App Intents, so the toggle and brightness logic is written 
 - The result shows a small snippet: the room's icon, name and new state (as on the Siri results mockup).
 - Siri and the widget follow the app's rules: a pending default or hybrid is shown on turn-on, 0% → 70%, a warmth replaces a hybrid, and a room with a remote scene has its "House Lights Now" scene updated (brightness kept with its colors; a warmth replaces them).
 - If the bridge can't be reached, Siri says so plainly.
+- Every room intent (Siri and the widget's toggles) requires an unlocked watch (`authenticationPolicy = .requiresAuthentication`); on a locked watch the system asks to unlock first.
 
 ## Look and app icon
 
@@ -158,7 +159,7 @@ The bridge is the source of truth for rooms and light state; the watch keeps onl
 | Last-known room states | App Group UserDefaults | For the widget and a fast first paint |
 | Room defaults | Bridge scenes "House Lights – \<room>" | Not on the watch |
 | Saved colors, hybrids (colors, moving, speed), remote rooms | App Group UserDefaults | Hybrids saved without a speed load as Slow |
-| Saved bridge replies | App Group folder, bridge-replies.json | Only when Save bridge replies is tapped |
+| Saved bridge replies | App Group folder, bridge-replies.json | Only when Save bridge replies is tapped; deleted after 7 days |
 
 ## Out of scope for v1
 

@@ -1,3 +1,4 @@
+import AppIntents
 import Foundation
 import Testing
 @testable import House_Lights_Watch_App
@@ -39,6 +40,24 @@ struct MaintenanceTests {
         let url = try #require(await app.saveBridgeReplies())
         let object = try JSONSerialization.jsonObject(with: Data(contentsOf: url)) as? [String: Any]
         #expect(Set(object?.keys.map { $0 } ?? []) == Set(AppModel.replyResources))
+    }
+
+    @Test func bridgeRepliesAreDeletedAfterAWeek() async throws {
+        let (app, _) = await ready()
+        app.bridgeRepliesURL = FileManager.default.temporaryDirectory.appending(path: "replies-\(UUID()).json")
+        let url = try #require(await app.saveBridgeReplies())
+        #expect(!app.removeStaleBridgeReplies(now: .now.addingTimeInterval(6 * 24 * 3600)))   // 6 days: kept
+        #expect(FileManager.default.fileExists(atPath: url.path()))
+        #expect(app.removeStaleBridgeReplies(now: .now.addingTimeInterval(8 * 24 * 3600)))    // 8 days: gone
+        #expect(!FileManager.default.fileExists(atPath: url.path()))
+    }
+
+    @Test func roomIntentsNeedAnUnlockedWatch() {
+        #expect(TurnOnRoomIntent.authenticationPolicy == .requiresAuthentication)
+        #expect(TurnOffRoomIntent.authenticationPolicy == .requiresAuthentication)
+        #expect(SetRoomBrightnessIntent.authenticationPolicy == .requiresAuthentication)
+        #expect(SetRoomWarmthIntent.authenticationPolicy == .requiresAuthentication)
+        #expect(ToggleRoomIntent.authenticationPolicy == .requiresAuthentication)
     }
 
     @Test func logTextHasEveryEntry() async {

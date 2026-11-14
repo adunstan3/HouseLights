@@ -3,8 +3,8 @@ import SwiftUI
 /// Settings › Bridge › Log: every request, response code and error, newest first.
 /// This is the one screen meant to scroll — it's for the first test at home. The share
 /// button (by the clock) sends the log as text. Below the log: Save bridge replies (the raw
-/// resource lists, to share when something looks wrong), Remove House Lights scenes, and
-/// Clear log.
+/// resource lists, to share when something looks wrong; deleted after 7 days), Remove House
+/// Lights scenes, and Clear log, with a note that what's shared names the home's rooms.
 struct BridgeLogView: View {
     @Environment(BridgeLog.self) private var log
     @Environment(AppModel.self) private var app
@@ -26,6 +26,7 @@ struct BridgeLogView: View {
         }
         .environment(\.defaultMinListRowHeight, 20)
         .navigationTitle("Log")
+        .onAppear { app.removeStaleBridgeReplies() }
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 ShareLink(item: app.logText, subject: Text("House Lights log")) {
@@ -72,6 +73,10 @@ struct BridgeLogView: View {
             if !log.entries.isEmpty {
                 Button("Clear log", role: .destructive) { log.clear() }
             }
+        } footer: {
+            Text("The shared log and bridge replies list your home’s room, device and scene names. Saved replies are deleted after 7 days.")
+                .font(.footnote)
+                .foregroundStyle(.secondary)
         }
         .disabled(busy)
     }

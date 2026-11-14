@@ -4,9 +4,12 @@ import Foundation
 
 // Siri and Shortcuts intents. All of them go through RoomActions, so the rules are the
 // same as in the app. Each result shows the Siri results snippet (mockups/9-siri-results.png).
+// Every one requires an unlocked watch (`authenticationPolicy`): the App Intents default,
+// .alwaysAllowed, would let Siri or the widget change the lights while the watch is locked.
 
 struct TurnOnRoomIntent: AppIntent {
     static let title: LocalizedStringResource = "Turn On Room"
+    static let authenticationPolicy: IntentAuthenticationPolicy = .requiresAuthentication
     static let description = IntentDescription("Turns on a Hue room or zone.")
     @Parameter(title: "Room") var room: RoomEntity
 
@@ -23,6 +26,7 @@ struct TurnOnRoomIntent: AppIntent {
 
 struct TurnOffRoomIntent: AppIntent {
     static let title: LocalizedStringResource = "Turn Off Room"
+    static let authenticationPolicy: IntentAuthenticationPolicy = .requiresAuthentication
     static let description = IntentDescription("Turns off a Hue room or zone.")
     @Parameter(title: "Room") var room: RoomEntity
 
@@ -39,6 +43,7 @@ struct TurnOffRoomIntent: AppIntent {
 
 struct SetRoomBrightnessIntent: AppIntent {
     static let title: LocalizedStringResource = "Set Room Brightness"
+    static let authenticationPolicy: IntentAuthenticationPolicy = .requiresAuthentication
     static let description = IntentDescription("Sets a Hue room's brightness.")
     @Parameter(title: "Room") var room: RoomEntity
     @Parameter(title: "Brightness", description: "Percent, 1 to 100", inclusiveRange: (1, 100)) var brightness: Int
@@ -55,6 +60,7 @@ struct SetRoomBrightnessIntent: AppIntent {
 
 struct SetRoomWarmthIntent: AppIntent {
     static let title: LocalizedStringResource = "Set Room Warmth"
+    static let authenticationPolicy: IntentAuthenticationPolicy = .requiresAuthentication
     static let description = IntentDescription("Sets a Hue room's white color temperature, from 2200 K (warm) to 6500 K (cool).")
     @Parameter(title: "Room") var room: RoomEntity
     @Parameter(title: "Kelvin", inclusiveRange: (2200, 6500)) var kelvin: Int
@@ -72,6 +78,7 @@ struct SetRoomWarmthIntent: AppIntent {
 /// The widget's round buttons. Runs without opening the app.
 struct ToggleRoomIntent: AppIntent {
     static let title: LocalizedStringResource = "Toggle Room"
+    static let authenticationPolicy: IntentAuthenticationPolicy = .requiresAuthentication
     static let isDiscoverable = false
     @Parameter(title: "Room ID") var roomID: String
 

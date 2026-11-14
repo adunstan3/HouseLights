@@ -11,6 +11,25 @@ extension AppModel {
     /// Where Save bridge replies writes, in the App Group container.
     nonisolated static var defaultRepliesURL: URL { AppGroup.containerURL.appending(path: "bridge-replies.json") }
 
+    /// How long saved bridge replies are kept: they list the home's rooms, devices and scenes.
+    static let repliesMaxAge: TimeInterval = 7 * 24 * 60 * 60
+
+    /// Deletes saved bridge replies older than a week (checked at launch and when the Log
+    /// screen opens). Returns true if a file was deleted.
+    @discardableResult
+    func removeStaleBridgeReplies(now: Date = .now) -> Bool {
+        let url = bridgeRepliesURL
+        guard let saved = (try? FileManager.default.attributesOfItem(atPath: url.path()))?[.modificationDate] as? Date,
+              now.timeIntervalSince(saved) > Self.repliesMaxAge else { return false }
+        do {
+            try FileManager.default.removeItem(at: url)
+            log.add(.info, "Deleted bridge replies saved more than 7 days ago")
+            return true
+        } catch {
+            return false
+        }
+    }
+
     /// The resource lists worth seeing when something looks wrong at home.
     static let replyResources = ["room", "zone", "grouped_light", "light", "scene", "device", "bridge_home"]
 
