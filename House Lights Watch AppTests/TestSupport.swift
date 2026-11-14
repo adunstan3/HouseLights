@@ -11,3 +11,11 @@ func eventually(timeout: Duration = .seconds(2), _ condition: () async -> Bool) 
     }
     return await condition()
 }
+
+/// Lines written to a LogSink from any thread.
+final class LockedLines: @unchecked Sendable {
+    private let lock = NSLock()
+    private var lines: [String] = []
+    func append(_ line: String) { lock.withLock { lines.append(line) } }
+    var all: [String] { lock.withLock { lines } }
+}

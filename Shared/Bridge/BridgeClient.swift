@@ -123,6 +123,9 @@ nonisolated struct BridgeCredentials: Sendable, Equatable {
             log(.error, "Pairing: Keychain save failed (\(status)); nothing kept")
             throw BridgeError.notSaved("Keychain error \(status)")
         }
+        if results.contains(.appOnly) {
+            log(.error, "Keychain: the shared access group is missing, so the key was saved for the app only; the widget and Siri can't read it")
+        }
         store.bridgeIP = paired.ip
         return BridgeCredentials(ip: paired.ip, applicationKey: paired.applicationKey, certificateHash: hash)
     }

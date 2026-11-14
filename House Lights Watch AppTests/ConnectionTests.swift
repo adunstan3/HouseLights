@@ -89,12 +89,36 @@ struct ConnectionTests {
         #expect(PairingModel.message(for: BridgeError.certificateChanged, ip: "x").contains("Re-pair"))
     }
 
-    @Test func forgettingTheBridgeReturnsToPairing() async {
-        let (app, _) = Self.makeApp(paired: true)
+    @Test func forgettingTheBridgeReturnsToPairing() async throws {
+        let keychain = MemoryKeychain()
+        let (app, _) = Self.makeApp(paired: true, keychain: keychain)
+        let replies = FileManager.default.temporaryDirectory.appending(path: "replies-\(UUID()).json")
+        app.bridgeRepliesURL = replies
         await app.start()
+        _ = try #require(await app.saveBridgeReplies())
+        #expect(app.store.bridgeIP != nil)
         app.forgetBridge()
         #expect(app.phase == .unpaired)
         #expect(app.credentials == nil)
+        #expect(keychain.load(.applicationKey) == nil)
+        #expect(keychain.load(.certificateHash) == nil)
+        #expect(app.store.bridgeIP == nil)                   // the Bridge screen starts empty
+        #expect(app.log.entries.isEmpty)
+        #expect(!FileManager.default.fileExists(atPath: replies.path()))
+    }
+
+    @Test func pairingSavedAppOnlyIsLogged() throws {
+        final class AppOnlyKeychain: SecretStore, @unchecked Sendable {
+            var items: [KeychainStore.Account: Data] = [:]
+            func save(_ data: Data, for account: KeychainStore.Account) -> KeychainStore.SaveResult { items[account] = data; return .appOnly }
+            func load(_ account: KeychainStore.Account) -> Data? { items[account] }
+            func delete(_ account: KeychainStore.Account) { items[account] = nil }
+        }
+        let lines = LockedLines()
+        try BridgeCredentials.save(PairedBridge(ip: "10.0.0.2", applicationKey: "k", certificateHash: CredentialTests.hash),
+                                   store: CredentialTests.store(), keychain: AppOnlyKeychain(),
+                                   log: LogSink { _, text in lines.append(text) })
+        #expect(lines.all.contains { $0.contains("widget and Siri can't read it") })
     }
 }
 

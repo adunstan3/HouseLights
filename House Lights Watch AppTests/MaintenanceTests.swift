@@ -35,6 +35,7 @@ struct MaintenanceTests {
 
     @Test func bridgeRepliesAreSavedAsOneJSONFile() async throws {
         let (app, _) = await ready()
+        app.bridgeRepliesURL = FileManager.default.temporaryDirectory.appending(path: "replies-\(UUID()).json")
         let url = try #require(await app.saveBridgeReplies())
         let object = try JSONSerialization.jsonObject(with: Data(contentsOf: url)) as? [String: Any]
         #expect(Set(object?.keys.map { $0 } ?? []) == Set(AppModel.replyResources))

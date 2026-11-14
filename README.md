@@ -236,7 +236,8 @@ plainly.
   certificate seen at pairing, and refuses a different one later. Checks are never
   relaxed for anything else. Only the pairing client accepts an unknown certificate; the
   app, widget and Siri need the saved pin, and a key saved without one asks for re-pairing
-  and sends nothing. Pairing keeps the key only if the pin was saved with it.
+  and sends nothing. Pairing keeps the key only if the pin was saved with it. Redirects
+  are refused, so the key header never goes to another host.
 - **Pairing:** `POST /api` with `generateclientkey`; the application key goes in the
   Keychain.
 - **Reading:** `room`, `zone`, `grouped_light`, `light` and `scene` resources.
@@ -266,7 +267,7 @@ Settings › Bridge › Log › **Remove House Lights scenes** deletes all of th
 
 | What | Where |
 | --- | --- |
-| Bridge application key, pinned certificate hash | Keychain, shared with the widget |
+| Bridge application key, pinned certificate hash | Keychain, shared with the widget; this watch only (not in backups to another device) |
 | Bridge IP, grid order, temporary rooms, last-known room states | App Group defaults, shared with the widget |
 | Room defaults | Scenes on the bridge, "House Lights – \<room\>" |
 | Saved colors, hybrids (colors, moving, speed), remote rooms, grid layout | App Group defaults |

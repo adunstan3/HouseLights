@@ -42,7 +42,10 @@ struct BridgeEnvironment {
 
     /// The environment for this launch (see RuntimeEnvironment for the debug arguments).
     static func current(log: LogSink, store: SharedStore) -> BridgeEnvironment {
-        guard RuntimeEnvironment.usesMockBridge else { return .live(store: store) }
+        guard RuntimeEnvironment.usesMockBridge else {
+            KeychainStore.migrateAccessibility(log: log)
+            return .live(store: store)
+        }
         let tiles = RuntimeEnvironment.debugValue("mockTiles").flatMap(Int.init) ?? 6
         var home = MockHome.sample(tiles: tiles)
         if RuntimeEnvironment.flag("mockHybrid") {

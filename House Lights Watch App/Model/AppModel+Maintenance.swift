@@ -9,7 +9,7 @@ extension AppModel {
     }
 
     /// Where Save bridge replies writes, in the App Group container.
-    static var bridgeRepliesURL: URL { AppGroup.containerURL.appending(path: "bridge-replies.json") }
+    nonisolated static var defaultRepliesURL: URL { AppGroup.containerURL.appending(path: "bridge-replies.json") }
 
     /// The resource lists worth seeing when something looks wrong at home.
     static let replyResources = ["room", "zone", "grouped_light", "light", "scene", "device", "bridge_home"]
@@ -29,7 +29,7 @@ extension AppModel {
             }
         }
         guard !parts.isEmpty else { return nil }
-        let url = Self.bridgeRepliesURL
+        let url = bridgeRepliesURL
         do {
             try FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
             try Data("{\n\(parts.joined(separator: ",\n"))\n}\n".utf8).write(to: url, options: .atomic)

@@ -27,6 +27,8 @@ final class AppModel {
 
     let log: BridgeLog
     let store: SharedStore
+    /// Where Save bridge replies writes (tests use a temporary file).
+    @ObservationIgnored var bridgeRepliesURL = AppModel.defaultRepliesURL
     let environment: BridgeEnvironment
     private(set) var client: (any BridgeClient)?
 
@@ -193,13 +195,17 @@ final class AppModel {
         await start()
     }
 
+    /// Forgets the key, its certificate pin and the bridge's IP, and deletes the files that
+    /// hold the home's names (the Bridge log and saved bridge replies).
     func forgetBridge() {
         stopEventStream()
         environment.forgetCredentials()
+        store.bridgeIP = nil
         credentials = nil
         client = nil
         phase = .unpaired
-        log.add(.info, "Forgot bridge key")
+        log.erase()
+        try? FileManager.default.removeItem(at: bridgeRepliesURL)
     }
 
     // MARK: App lifecycle

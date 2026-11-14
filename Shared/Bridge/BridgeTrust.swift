@@ -11,7 +11,8 @@ import Synchronization
 ///   presents is accepted and remembered;
 /// - in `.pinned` mode (every other client: app, widget, Siri), only a certificate with that
 ///   same SHA-256 hash is accepted. There is no "no pin, accept anything" outside pairing.
-nonisolated final class BridgeTrust: NSObject, URLSessionDelegate, Sendable {
+/// It also refuses HTTP redirects, so the key header is never forwarded to another host.
+nonisolated final class BridgeTrust: NSObject, URLSessionTaskDelegate, Sendable {
     enum Mode: Sendable, Equatable {
         /// Pairing: accept the bridge's certificate and remember its hash.
         case pairing
@@ -58,6 +59,15 @@ nonisolated final class BridgeTrust: NSObject, URLSessionDelegate, Sendable {
             log(.error, "Certificate changed (\(hash.prefix(4).hex)… ≠ pinned \(pinned)…). Re-pair needed.")
             return (.cancelAuthenticationChallenge, nil)
         }
+    }
+
+    /// The bridge never redirects; refusing means the redirect reply itself comes back (and
+    /// fails as an HTTP error) instead of the request, with its key, going somewhere else.
+    /// (The completion-handler form: the async form crashes the Swift 6 compiler here.)
+    func urlSession(_ session: URLSession, task: URLSessionTask, willPerformHTTPRedirection response: HTTPURLResponse,
+                    newRequest request: URLRequest, completionHandler: @escaping @Sendable (URLRequest?) -> Void) {
+        log(.error, "Refused a redirect (\(response.statusCode)) to \(request.url?.host() ?? "?")")
+        completionHandler(nil)
     }
 
     enum Decision: Equatable { case accept, reject }

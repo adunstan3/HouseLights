@@ -42,6 +42,13 @@ final class BridgeLog {
         scheduleSave()
     }
 
+    /// Empties the log and deletes its file (forgetting the bridge).
+    func erase() {
+        saveTask?.cancel()
+        entries.removeAll()
+        if let fileURL { try? FileManager.default.removeItem(at: fileURL) }
+    }
+
     /// A logger the (nonisolated) bridge client can call from any thread.
     nonisolated var sink: LogSink {
         LogSink { kind, text in
