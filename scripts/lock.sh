@@ -40,5 +40,10 @@ case "${WATCHAPPS_LOCK_HELD:-}" in
             xcrun simctl shutdown "$_lock_id" || true
           fi
         done
+    # Run the script itself as a child and pass on its exit status. The EXIT trap
+    # alone can't: after an error such as "unbound variable", bash 3.2 runs the trap
+    # with $? = 0 and the script exits 0, so a crashed script would look like it passed.
+    /bin/bash "$0" "$@" && _lock_status=0 || _lock_status=$?
+    exit "$_lock_status"
     ;;
 esac

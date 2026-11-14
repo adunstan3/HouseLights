@@ -70,7 +70,7 @@ fi
 # 4. Archive, check, upload.
 ARCHIVE="build/$APP_NAME-$NEW.xcarchive"
 rm -rf "$ARCHIVE" build/Export
-echo "Archiving $APP_NAME build $NEW…"
+echo "Archiving $APP_NAME build ${NEW}…"   # braces: bash 3.2 reads "…" as part of a bare name
 if ! xcodebuild archive -project "$PROJECT" -scheme "$SCHEME" -configuration Release \
   -destination 'generic/platform=watchOS' -archivePath "$ARCHIVE" -allowProvisioningUpdates > build/archive.log 2>&1; then
   grep -E "error" build/archive.log | head -20
