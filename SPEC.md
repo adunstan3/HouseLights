@@ -20,7 +20,7 @@ The watch calls the bridge's local CLIP API v2 over HTTPS on home Wi-Fi; nothing
 
 - **Address:** the user enters the bridge's IP on the Bridge screen. They reserve a fixed IP for it in the router. watchOS can't do mDNS discovery, so there is no auto-discovery.
 - **Pairing:** the user presses the bridge's round button, then taps Pair within 30 seconds. The app POSTs to `/api` with `generateclientkey: true` and retries every 2 seconds until the bridge answers or 30 seconds pass. The returned application key (`hue-application-key`) is stored in the Keychain.
-- **Certificate:** the bridge uses a self-signed certificate. Trust it with a URLSession delegate that accepts the bridge's certificate only for the saved IP. Never disable certificate checks globally. The certificate seen at pairing is remembered (stored with the key), and a different one is refused later with a "re-pair" message in the log.
+- **Certificate:** the bridge uses a self-signed certificate. Trust it with a URLSession delegate that accepts the bridge's certificate only for the saved IP. Never disable certificate checks globally. The certificate seen at pairing is remembered (its SHA-256 hash, stored with the key), and a different one is refused later with a "re-pair" message in the log. Accepting whatever certificate the bridge presents happens only while pairing; every other connection (app, widget, Siri) must have the pin. A saved key without a pin counts as needing re-pairing: nothing is sent, the app shows Bridge not reachable with the re-pair message, and Siri says to pair again. Pairing saves the key and the pin together or not at all: if no certificate was seen or either Keychain save fails, pairing fails with a message and keeps nothing.
 - **Local network:** add `NSLocalNetworkUsageDescription` and an App Transport Security exception for local networking (`NSAllowsLocalNetworking`).
 - **Reading state:** `GET /clip/v2/resource/room`, `zone`, `grouped_light` and `light`. Rooms and zones come from the bridge, with their names and room types (archetypes).
 - **Controlling:** a room or zone is controlled through its `grouped_light` (on, dimming, color\_temperature, color).
@@ -149,7 +149,7 @@ The bridge is the source of truth for rooms and light state; the watch keeps onl
 
 | What | Where | Notes |
 | --- | --- | --- |
-| Bridge application key | Keychain, shared access group | Readable by the app and the widget extension |
+| Bridge application key, certificate pin (SHA-256) | Keychain, shared access group | Readable by the app and the widget extension; saved together or not at all |
 | Bridge IP | App Group UserDefaults | Shared with the widget |
 | Grid order (room ids) | App Group UserDefaults | Unknown new ids are appended |
 | Widget room picks | Widget configuration | Set when adding or editing the widget |

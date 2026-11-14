@@ -4,10 +4,12 @@ import Testing
 
 @MainActor
 struct ConnectionTests {
-    static func makeApp(paired: Bool, reachable: Bool = true) -> (AppModel, MockBridgeClient) {
+    static func makeApp(paired: Bool, reachable: Bool = true,
+                        keychain: MemoryKeychain = MemoryKeychain()) -> (AppModel, MockBridgeClient) {
         let mock = MockBridgeClient(reachable: reachable, latency: .milliseconds(5))
         let store = SharedStore(defaults: UserDefaults(suiteName: "test-\(UUID())")!)
-        let app = AppModel(environment: .mock(mock, paired: paired, store: store), store: store, log: BridgeLog(fileURL: nil))
+        let app = AppModel(environment: .mock(mock, paired: paired, store: store, keychain: keychain), store: store,
+                           log: BridgeLog(fileURL: nil))
         return (app, mock)
     }
 
@@ -48,6 +50,30 @@ struct ConnectionTests {
         #expect(app.credentials?.ip == "192.168.1.20")
         #expect(app.phase == .ready)
         #expect(app.showPairedConfirmation)   // Paired + Show rooms stays visible
+    }
+
+    @Test func keyWithoutPinSendsNothingAndAsksToRepair() async {
+        let keychain = MemoryKeychain()
+        let (app, mock) = Self.makeApp(paired: true, keychain: keychain)
+        keychain.delete(.certificateHash)
+        await app.start()
+        #expect(app.phase == .unreachable(BridgeError.pinMissing.localizedDescription))
+        #expect(app.client == nil)
+        #expect(await mock.requestCount == 0)
+        #expect(app.log.entries.contains { $0.kind == .error && $0.text.contains("No certificate pin") })
+    }
+
+    @Test func failedKeychainSaveFailsPairing() async throws {
+        let (app, _) = Self.makeApp(paired: false, keychain: MemoryKeychain(failing: [.applicationKey]))
+        await app.start()
+        let pairing = PairingModel(ip: nil, alreadyPaired: false)
+        pairing.ip = "192.168.1.20"
+        pairing.pair(app: app)
+        for _ in 0..<60 where pairing.isWaiting { try await Task.sleep(for: .milliseconds(100)) }
+        guard case .failed(let why) = pairing.state else { Issue.record("expected failure, got \(pairing.state)"); return }
+        #expect(why.contains("couldn't be saved"))
+        #expect(app.credentials == nil)
+        #expect(!app.showPairedConfirmation)
     }
 
     @Test func badIPIsRefusedBeforeAsking() async {

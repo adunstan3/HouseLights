@@ -12,6 +12,10 @@ nonisolated enum BridgeError: Error, Sendable, Equatable, LocalizedError {
     case http(Int, String)
     case badResponse(String)
     case notPaired
+    /// A key is saved without its certificate pin: nothing is sent until re-paired.
+    case pinMissing
+    /// Pairing worked but the key and pin couldn't both be saved.
+    case notSaved(String)
 
     var errorDescription: String? {
         switch self {
@@ -22,6 +26,8 @@ nonisolated enum BridgeError: Error, Sendable, Equatable, LocalizedError {
         case .http(let code, let msg): "Bridge error \(code)\(msg.isEmpty ? "" : ": \(msg)")"
         case .badResponse(let why): "Unexpected reply from the bridge (\(why))"
         case .notPaired: "Not paired with a bridge."
+        case .pinMissing: "The bridge's saved certificate is missing. Re-pair in Settings › Bridge."
+        case .notSaved(let why): "Paired, but the key couldn't be saved (\(why)). Try pairing again."
         }
     }
 
@@ -31,5 +37,5 @@ nonisolated enum BridgeError: Error, Sendable, Equatable, LocalizedError {
         return false
     }
 
-    var needsRepair: Bool { self == .certificateChanged || self == .unauthorized }
+    var needsRepair: Bool { self == .certificateChanged || self == .unauthorized || self == .pinMissing }
 }

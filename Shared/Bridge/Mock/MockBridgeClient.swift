@@ -10,6 +10,9 @@ actor MockBridgeClient: BridgeClient {
     private let latency: Duration
     private let log: LogSink
 
+    /// The pretend certificate hash the mock "presents" when pairing.
+    static let certificateHash = Data(repeating: 7, count: 32)
+
     init(home: HomeSnapshot = MockHome.sample(), reachable: Bool = true, latency: Duration = .milliseconds(150),
          log: LogSink = .none) {
         self.home = home
@@ -34,7 +37,7 @@ actor MockBridgeClient: BridgeClient {
         pairAttempts += 1
         // Pretend the button is pressed between the first and second attempt.
         if pairAttempts < 2 { return .linkButtonNotPressed }
-        return .paired(PairedBridge(ip: ip, applicationKey: "mock-application-key", certificateHash: Data(repeating: 7, count: 32)))
+        return .paired(PairedBridge(ip: ip, applicationKey: "mock-application-key", certificateHash: Self.certificateHash))
     }
 
     func fetchHome() async throws -> HomeSnapshot {
@@ -174,7 +177,11 @@ actor MockBridgeClient: BridgeClient {
 
     // MARK: Helpers
 
+    /// How many requests have been made (tests check that nothing was sent).
+    private(set) var requestCount = 0
+
     private func respond(_ what: String) async throws {
+        requestCount += 1
         log(.request, what)
         try await Task.sleep(for: latency)
         guard reachable else {

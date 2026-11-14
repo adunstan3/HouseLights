@@ -28,7 +28,7 @@ data, exactly as it sent it.
 | --- | --- | --- |
 | Local network | The watch may ask to allow local network access: allow it. | `secure connection failed`, `no answer at …` |
 | Pairing | Enter the bridge IP, press its button, tap Pair within 30 s → "Paired, N rooms and M zones". | `POST /api` replies; error 101 means the button wasn't pressed |
-| Certificate | Pairing remembers the bridge's certificate. A later "certificate changed" means the bridge was replaced/reset: Pair again. | `Certificate changed` |
+| Certificate | Pairing remembers the bridge's certificate. A later "certificate changed" means the bridge was replaced/reset: Pair again. A watch paired before the pin became required, without a saved pin, shows Bridge not reachable with "Re-pair" once: pair again in Settings › Bridge. After that, the widget and Siri work as before. | `Certificate changed`, `No certificate pin saved`, `Saved key and certificate pin`, `Pairing: Keychain save failed` |
 | Grid | Every room and zone appears with a sensible icon; tap toggles; hold opens the room without toggling. | `PUT /clip/v2/resource/grouped_light/…` and its code |
 | Live updates | Change a light in the Hue app, with a remote or at a switch: the tile updates within a second (event stream) or at most 3 s (backup read, while the stream is silent). | `Event stream: first update received` — if it never appears, the stream isn't delivering on the watch and the 3 s backup is doing the work. While the stream works, the backup slows to every 20 s; if changes then take up to 20 s to show, the stream is missing some updates |
 | Crown on grid | Rooms that are on brighten/dim together; 100% stops; 0% turns off; tap brings it back at 70%. Tune the Crown speed if it feels too fast or slow. | |

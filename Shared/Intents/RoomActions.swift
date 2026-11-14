@@ -141,8 +141,16 @@ nonisolated enum RoomActions {
         // The simulator can't reach the bridge: act on the sample home.
         return MockBridgeClient(home: MockHome.sample(), latency: .milliseconds(50), log: log)
         #else
-        guard let credentials = BridgeCredentials.load() else { throw IntentError.notPaired }
-        return HueBridgeClient(credentials: credentials, log: log)
+        switch BridgeCredentials.loadSaved() {
+        case .none:
+            throw IntentError.notPaired
+        case .missingPin(let ip):
+            // Never send the key without a certificate pin.
+            log(.error, "No certificate pin saved for the bridge at \(ip); nothing sent. Re-pair in Settings › Bridge.")
+            throw IntentError.needsRepair
+        case .paired(let credentials):
+            return HueBridgeClient(credentials: credentials, log: log)
+        }
         #endif
     }
 }

@@ -108,14 +108,23 @@ final class AppModel {
     // MARK: Connecting
 
     func start() async {
-        credentials = environment.loadCredentials()
-        guard let credentials else {
+        switch environment.loadCredentials() {
+        case .none:
+            credentials = nil
             phase = .unpaired
             log.add(.info, "Not paired: showing the Bridge screen")
-            return
+        case .missingPin(let ip):
+            // A key without its certificate pin: send nothing (the key would go to whatever
+            // answers at that IP) until the bridge is paired again.
+            credentials = nil
+            client = nil
+            log.add(.error, "No certificate pin saved for the bridge at \(ip); nothing sent. Re-pair in Settings › Bridge.")
+            fail(BridgeError.pinMissing)
+        case .paired(let saved):
+            credentials = saved
+            client = environment.makeClient(saved, log.sink)
+            await reload()
         }
-        client = environment.makeClient(credentials, log.sink)
-        await reload()
     }
 
     /// Reads everything from the bridge again (Try again, launch, structural events).
@@ -174,10 +183,11 @@ final class AppModel {
         }
     }
 
-    /// Called after a successful pairing on the Bridge screen.
-    func didPair(_ paired: PairedBridge) async {
-        environment.saveCredentials(paired)
-        log.add(.info, "Saved key for bridge at \(paired.ip)")
+    /// Called after a successful pairing on the Bridge screen. Throws if the key and its
+    /// certificate pin couldn't both be saved (then nothing is kept).
+    func didPair(_ paired: PairedBridge) async throws {
+        try environment.saveCredentials(paired, log.sink)
+        log.add(.info, "Saved key and certificate pin for bridge at \(paired.ip)")
         client = nil
         home = .empty
         await start()

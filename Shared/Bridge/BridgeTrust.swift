@@ -7,18 +7,27 @@ import Synchronization
 /// saved bridge IP. Hue bridges use a self-signed (or Signify-signed) certificate that
 /// iOS doesn't trust, so ordinary validation would fail. Instead:
 /// - any other host gets the system's default handling (we never relax checks globally);
-/// - while pairing, the certificate the bridge presents is accepted and remembered;
-/// - after pairing, only a certificate with that same SHA-256 hash is accepted.
+/// - in `.pairing` mode (only the Bridge screen's pairing client), the certificate the bridge
+///   presents is accepted and remembered;
+/// - in `.pinned` mode (every other client: app, widget, Siri), only a certificate with that
+///   same SHA-256 hash is accepted. There is no "no pin, accept anything" outside pairing.
 nonisolated final class BridgeTrust: NSObject, URLSessionDelegate, Sendable {
+    enum Mode: Sendable, Equatable {
+        /// Pairing: accept the bridge's certificate and remember its hash.
+        case pairing
+        /// Paired: accept only the certificate with this SHA-256 hash.
+        case pinned(Data)
+    }
+
     let host: String
-    let pinnedHash: Data?
+    let mode: Mode
     private let seen = Mutex<Data?>(nil)
     private let mismatch = Mutex(false)
     private let log: LogSink
 
-    init(host: String, pinnedHash: Data?, log: LogSink) {
+    init(host: String, mode: Mode, log: LogSink) {
         self.host = host
-        self.pinnedHash = pinnedHash
+        self.mode = mode
         self.log = log
     }
 
@@ -40,22 +49,25 @@ nonisolated final class BridgeTrust: NSObject, URLSessionDelegate, Sendable {
         }
         let hash = Self.hash(of: leaf)
         seen.withLock { $0 = hash }
-        switch Self.decide(pinned: pinnedHash, presented: hash) {
+        switch Self.decide(mode, presented: hash) {
         case .accept:
             return (.useCredential, URLCredential(trust: trust))
         case .reject:
             mismatch.withLock { $0 = true }
-            log(.error, "Certificate changed (\(hash.prefix(4).hex)… ≠ pinned \(pinnedHash?.prefix(4).hex ?? "-")…). Re-pair needed.")
+            let pinned = if case .pinned(let p) = mode { p.prefix(4).hex } else { "-" }
+            log(.error, "Certificate changed (\(hash.prefix(4).hex)… ≠ pinned \(pinned)…). Re-pair needed.")
             return (.cancelAuthenticationChallenge, nil)
         }
     }
 
     enum Decision: Equatable { case accept, reject }
 
-    /// With no pin yet (pairing) the bridge's certificate is accepted; afterwards it must match.
-    static func decide(pinned: Data?, presented: Data) -> Decision {
-        guard let pinned else { return .accept }
-        return pinned == presented ? .accept : .reject
+    /// Pairing accepts the bridge's certificate; afterwards it must match the pin exactly.
+    static func decide(_ mode: Mode, presented: Data) -> Decision {
+        switch mode {
+        case .pairing: .accept
+        case .pinned(let pinned): !pinned.isEmpty && pinned == presented ? .accept : .reject
+        }
     }
 
     static func hash(of certificate: SecCertificate) -> Data {

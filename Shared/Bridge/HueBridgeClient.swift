@@ -10,11 +10,12 @@ nonisolated final class HueBridgeClient: BridgeClient {
     private let streamSession: URLSession
     private let log: LogSink
 
-    init(ip: String, applicationKey: String?, pinnedCertificate: Data?, log: LogSink) {
+    /// `trust` is `.pairing` only for the pairing client (no key yet); everything else is pinned.
+    init(ip: String, applicationKey: String?, trust mode: BridgeTrust.Mode, log: LogSink) {
         self.ip = ip
         self.key = applicationKey
         self.log = log
-        trust = BridgeTrust(host: ip, pinnedHash: pinnedCertificate, log: log)
+        trust = BridgeTrust(host: ip, mode: mode, log: log)
 
         let config = URLSessionConfiguration.ephemeral
         config.timeoutIntervalForRequest = 8
@@ -31,7 +32,13 @@ nonisolated final class HueBridgeClient: BridgeClient {
 
     convenience init(credentials: BridgeCredentials, log: LogSink) {
         self.init(ip: credentials.ip, applicationKey: credentials.applicationKey,
-                  pinnedCertificate: credentials.certificateHash, log: log)
+                  trust: .pinned(credentials.certificateHash), log: log)
+    }
+
+    /// A client for pairing with the bridge at `ip`: no key, and it accepts (and remembers)
+    /// whatever certificate the bridge presents.
+    static func forPairing(ip: String, log: LogSink) -> HueBridgeClient {
+        HueBridgeClient(ip: ip, applicationKey: nil, trust: .pairing, log: log)
     }
 
     deinit {

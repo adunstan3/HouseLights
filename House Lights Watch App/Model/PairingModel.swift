@@ -53,7 +53,8 @@ final class PairingModel {
                 switch outcome {
                 case .paired(let bridge):
                     app.showPairedConfirmation = true
-                    await app.didPair(bridge)
+                    do { try await app.didPair(bridge) }
+                    catch { app.showPairedConfirmation = false; throw error }
                     self.state = .paired
                 case .timedOut:
                     app.log.add(.error, "Pairing timed out after 30 s (button not pressed)")

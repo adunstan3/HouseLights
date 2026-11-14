@@ -61,9 +61,54 @@ struct PairingTests {
     }
 
     @Test func certificatePinning() {
-        let a = Data([1, 2, 3]), b = Data([4, 5, 6])
-        #expect(BridgeTrust.decide(pinned: nil, presented: a) == .accept)   // pairing
-        #expect(BridgeTrust.decide(pinned: a, presented: a) == .accept)
-        #expect(BridgeTrust.decide(pinned: a, presented: b) == .reject)
+        let a = Data(repeating: 1, count: 32), b = Data(repeating: 2, count: 32)
+        #expect(BridgeTrust.decide(.pairing, presented: a) == .accept)       // only while pairing
+        #expect(BridgeTrust.decide(.pinned(a), presented: a) == .accept)
+        #expect(BridgeTrust.decide(.pinned(a), presented: b) == .reject)     // mismatched pin refuses
+        #expect(BridgeTrust.decide(.pinned(Data()), presented: a) == .reject) // an empty pin never accepts
+    }
+}
+
+/// The key and its certificate pin are saved together or not at all, and a key without a
+/// pin never makes a client.
+struct CredentialTests {
+    static let hash = Data(repeating: 9, count: 32)
+    static func store() -> SharedStore { SharedStore(defaults: UserDefaults(suiteName: "test-\(UUID())")!) }
+
+    @Test func savedPairingLoadsWithItsPin() throws {
+        let store = Self.store(), keychain = MemoryKeychain()
+        try BridgeCredentials.save(PairedBridge(ip: "10.0.0.2", applicationKey: "k", certificateHash: Self.hash),
+                                   store: store, keychain: keychain)
+        #expect(BridgeCredentials.loadSaved(store: store, keychain: keychain)
+                == .paired(BridgeCredentials(ip: "10.0.0.2", applicationKey: "k", certificateHash: Self.hash)))
+    }
+
+    @Test func keyWithoutPinNeedsRepair() {
+        let store = Self.store(), keychain = MemoryKeychain()
+        store.bridgeIP = "10.0.0.2"
+        _ = keychain.save(Data("k".utf8), for: .applicationKey)
+        #expect(BridgeCredentials.loadSaved(store: store, keychain: keychain) == .missingPin(ip: "10.0.0.2"))
+        _ = keychain.save(Data([1, 2, 3]), for: .certificateHash)   // not a SHA-256 hash
+        #expect(BridgeCredentials.loadSaved(store: store, keychain: keychain) == .missingPin(ip: "10.0.0.2"))
+    }
+
+    @Test func pairingWithoutACertificateIsNotSaved() {
+        let store = Self.store(), keychain = MemoryKeychain()
+        #expect(throws: BridgeError.self) {
+            try BridgeCredentials.save(PairedBridge(ip: "10.0.0.2", applicationKey: "k", certificateHash: nil),
+                                       store: store, keychain: keychain)
+        }
+        #expect(keychain.load(.applicationKey) == nil)
+        #expect(BridgeCredentials.loadSaved(store: store, keychain: keychain) == .none)
+    }
+
+    @Test func failedPinSaveKeepsNothing() {
+        let store = Self.store(), keychain = MemoryKeychain(failing: [.certificateHash])
+        #expect(throws: BridgeError.self) {
+            try BridgeCredentials.save(PairedBridge(ip: "10.0.0.2", applicationKey: "k", certificateHash: Self.hash),
+                                       store: store, keychain: keychain)
+        }
+        #expect(keychain.load(.applicationKey) == nil)   // no half-saved key
+        #expect(store.bridgeIP == nil)
     }
 }

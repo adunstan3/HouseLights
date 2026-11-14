@@ -76,30 +76,59 @@ nonisolated enum PairingAttempt: Sendable, Equatable {
 nonisolated struct PairedBridge: Sendable, Equatable {
     var ip: String
     var applicationKey: String
+    /// SHA-256 of the certificate seen while pairing. Saving refuses a pairing without it.
     var certificateHash: Data?
 }
 
-/// What a client needs to talk to a paired bridge.
+/// What a client needs to talk to a paired bridge. The certificate hash is required: a
+/// client never runs without a pin (see BridgeTrust).
 nonisolated struct BridgeCredentials: Sendable, Equatable {
     var ip: String
     var applicationKey: String
-    var certificateHash: Data?
+    var certificateHash: Data
 
-    /// Saved credentials, or nil if not paired yet.
-    static func load(store: SharedStore = SharedStore()) -> BridgeCredentials? {
-        guard let ip = store.bridgeIP, let key = KeychainStore.loadString(.applicationKey) else { return nil }
-        return BridgeCredentials(ip: ip, applicationKey: key, certificateHash: KeychainStore.load(.certificateHash))
+    /// What's saved on the watch.
+    enum Saved: Sendable, Equatable {
+        /// Not paired yet (or forgotten).
+        case none
+        /// A key is saved but its certificate pin isn't: nothing may be sent until re-paired.
+        case missingPin(ip: String)
+        case paired(BridgeCredentials)
     }
 
-    static func save(_ paired: PairedBridge, store: SharedStore = SharedStore()) {
+    /// A SHA-256 hash is 32 bytes; anything else isn't a usable pin.
+    static func isUsablePin(_ hash: Data?) -> Bool { hash?.count == 32 }
+
+    /// What's saved: the app, the widget and Siri all start here.
+    static func loadSaved(store: SharedStore = SharedStore(), keychain: any SecretStore = SystemKeychain()) -> Saved {
+        guard let ip = store.bridgeIP, let keyData = keychain.load(.applicationKey),
+              let key = String(data: keyData, encoding: .utf8), !key.isEmpty else { return .none }
+        guard let hash = keychain.load(.certificateHash), isUsablePin(hash) else { return .missingPin(ip: ip) }
+        return .paired(BridgeCredentials(ip: ip, applicationKey: key, certificateHash: hash))
+    }
+
+    /// Saves a pairing: the key and the certificate pin, both or neither. Throws (and leaves
+    /// nothing half-saved) if no certificate was captured or either Keychain save fails.
+    @discardableResult
+    static func save(_ paired: PairedBridge, store: SharedStore = SharedStore(),
+                     keychain: any SecretStore = SystemKeychain(), log: LogSink = .none) throws -> BridgeCredentials {
+        guard let hash = paired.certificateHash, isUsablePin(hash) else {
+            log(.error, "Pairing: no certificate was captured from the bridge, so the key wasn't saved")
+            throw BridgeError.notSaved("the bridge's certificate wasn't seen")
+        }
+        let results = [keychain.save(Data(paired.applicationKey.utf8), for: .applicationKey),
+                       keychain.save(hash, for: .certificateHash)]
+        if let failure = results.first(where: { !$0.succeeded }), case .failed(let status) = failure {
+            forget(keychain: keychain)
+            log(.error, "Pairing: Keychain save failed (\(status)); nothing kept")
+            throw BridgeError.notSaved("Keychain error \(status)")
+        }
         store.bridgeIP = paired.ip
-        KeychainStore.saveString(paired.applicationKey, for: .applicationKey)
-        if let hash = paired.certificateHash { KeychainStore.save(hash, for: .certificateHash) }
-        else { KeychainStore.delete(.certificateHash) }
+        return BridgeCredentials(ip: paired.ip, applicationKey: paired.applicationKey, certificateHash: hash)
     }
 
-    static func forget() {
-        KeychainStore.delete(.applicationKey)
-        KeychainStore.delete(.certificateHash)
+    static func forget(keychain: any SecretStore = SystemKeychain()) {
+        keychain.delete(.applicationKey)
+        keychain.delete(.certificateHash)
     }
 }

@@ -7,24 +7,35 @@ import Security
 nonisolated enum KeychainStore {
     static let service = "com.andrewdunstan.HouseLights.bridge"
 
-    enum Account: String {
+    enum Account: String, CaseIterable, Sendable {
         case applicationKey = "hue-application-key"
         case certificateHash = "bridge-certificate-sha256"
     }
 
+    /// Where a save ended up.
+    enum SaveResult: Sendable, Equatable {
+        /// In the shared access group (the widget can read it).
+        case shared
+        /// App-only, because the shared group isn't in the entitlements.
+        case appOnly
+        case failed(OSStatus)
+
+        var succeeded: Bool { if case .failed = self { false } else { true } }
+    }
+
     @discardableResult
-    static func save(_ data: Data, for account: Account) -> OSStatus {
+    static func save(_ data: Data, for account: Account) -> SaveResult {
         delete(account)
         var item = baseQuery(account)
         item[kSecValueData as String] = data
         item[kSecAttrAccessible as String] = kSecAttrAccessibleAfterFirstUnlock
         item[kSecAttrAccessGroup as String] = AppGroup.keychainGroup
-        var status = SecItemAdd(item as CFDictionary, nil)
-        if status == errSecMissingEntitlement {
-            item.removeValue(forKey: kSecAttrAccessGroup as String)
-            status = SecItemAdd(item as CFDictionary, nil)
-        }
-        return status
+        let status = SecItemAdd(item as CFDictionary, nil)
+        if status == errSecSuccess { return .shared }
+        guard status == errSecMissingEntitlement else { return .failed(status) }
+        item.removeValue(forKey: kSecAttrAccessGroup as String)
+        let appOnly = SecItemAdd(item as CFDictionary, nil)
+        return appOnly == errSecSuccess ? .appOnly : .failed(appOnly)
     }
 
     /// Searches every access group the process has, so it finds shared and app-only items.
@@ -42,7 +53,7 @@ nonisolated enum KeychainStore {
     }
 
     @discardableResult
-    static func saveString(_ value: String, for account: Account) -> OSStatus {
+    static func saveString(_ value: String, for account: Account) -> SaveResult {
         save(Data(value.utf8), for: account)
     }
 
@@ -55,4 +66,18 @@ nonisolated enum KeychainStore {
          kSecAttrService as String: service,
          kSecAttrAccount as String: account.rawValue]
     }
+}
+
+/// The Keychain as BridgeCredentials sees it, so tests can use an in-memory one.
+nonisolated protocol SecretStore: Sendable {
+    func save(_ data: Data, for account: KeychainStore.Account) -> KeychainStore.SaveResult
+    func load(_ account: KeychainStore.Account) -> Data?
+    func delete(_ account: KeychainStore.Account)
+}
+
+/// The real Keychain.
+nonisolated struct SystemKeychain: SecretStore {
+    func save(_ data: Data, for account: KeychainStore.Account) -> KeychainStore.SaveResult { KeychainStore.save(data, for: account) }
+    func load(_ account: KeychainStore.Account) -> Data? { KeychainStore.load(account) }
+    func delete(_ account: KeychainStore.Account) { KeychainStore.delete(account) }
 }

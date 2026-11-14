@@ -3,8 +3,9 @@ import Foundation
 /// How the app gets bridge clients and stores credentials: the real Hue bridge, or the mock.
 struct BridgeEnvironment {
     var isMock: Bool
-    var loadCredentials: () -> BridgeCredentials?
-    var saveCredentials: (PairedBridge) -> Void
+    var loadCredentials: () -> BridgeCredentials.Saved
+    /// Saves a pairing (key and certificate pin together), or throws without keeping either.
+    var saveCredentials: (PairedBridge, LogSink) throws -> BridgeCredentials
     var forgetCredentials: () -> Void
     /// A client for a paired bridge.
     var makeClient: (BridgeCredentials, LogSink) -> any BridgeClient
@@ -14,26 +15,27 @@ struct BridgeEnvironment {
     static func live(store: SharedStore = SharedStore()) -> BridgeEnvironment {
         BridgeEnvironment(
             isMock: false,
-            loadCredentials: { BridgeCredentials.load(store: store) },
-            saveCredentials: { BridgeCredentials.save($0, store: store) },
+            loadCredentials: { BridgeCredentials.loadSaved(store: store) },
+            saveCredentials: { try BridgeCredentials.save($0, store: store, log: $1) },
             forgetCredentials: { BridgeCredentials.forget() },
             makeClient: { HueBridgeClient(credentials: $0, log: $1) },
-            makePairingClient: { HueBridgeClient(ip: $0, applicationKey: nil, pinnedCertificate: nil, log: $1) })
+            makePairingClient: { HueBridgeClient.forPairing(ip: $0, log: $1) })
     }
 
-    /// One mock bridge for the whole run, so its state carries across clients.
-    static func mock(_ client: MockBridgeClient, paired: Bool, store: SharedStore = SharedStore()) -> BridgeEnvironment {
-        final class Box { var credentials: BridgeCredentials? }
-        let box = Box()
-        if paired { box.credentials = BridgeCredentials(ip: "192.168.1.2", applicationKey: "mock-application-key", certificateHash: nil) }
+    /// One mock bridge for the whole run, so its state carries across clients. Credentials go
+    /// through the real load/save rules, with an in-memory Keychain.
+    static func mock(_ client: MockBridgeClient, paired: Bool, store: SharedStore = SharedStore(),
+                     keychain: MemoryKeychain = MemoryKeychain()) -> BridgeEnvironment {
+        if paired {
+            _ = try? BridgeCredentials.save(PairedBridge(ip: "192.168.1.2", applicationKey: "mock-application-key",
+                                                         certificateHash: MockBridgeClient.certificateHash),
+                                            store: store, keychain: keychain)
+        }
         return BridgeEnvironment(
             isMock: true,
-            loadCredentials: { box.credentials },
-            saveCredentials: { p in
-                store.bridgeIP = p.ip
-                box.credentials = BridgeCredentials(ip: p.ip, applicationKey: p.applicationKey, certificateHash: p.certificateHash)
-            },
-            forgetCredentials: { box.credentials = nil },
+            loadCredentials: { BridgeCredentials.loadSaved(store: store, keychain: keychain) },
+            saveCredentials: { try BridgeCredentials.save($0, store: store, keychain: keychain, log: $1) },
+            forgetCredentials: { BridgeCredentials.forget(keychain: keychain) },
             makeClient: { _, _ in client },
             makePairingClient: { _, _ in client })
     }

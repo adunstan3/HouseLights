@@ -234,7 +234,9 @@ plainly.
 - **HTTPS with the bridge's own certificate.** Hue bridges use a certificate iOS doesn't
   trust, so a URLSession delegate accepts it only for the saved bridge IP, remembers the
   certificate seen at pairing, and refuses a different one later. Checks are never
-  relaxed for anything else.
+  relaxed for anything else. Only the pairing client accepts an unknown certificate; the
+  app, widget and Siri need the saved pin, and a key saved without one asks for re-pairing
+  and sends nothing. Pairing keeps the key only if the pin was saved with it.
 - **Pairing:** `POST /api` with `generateclientkey`; the application key goes in the
   Keychain.
 - **Reading:** `room`, `zone`, `grouped_light`, `light` and `scene` resources.
